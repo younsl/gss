@@ -1,0 +1,12 @@
+repos:
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.62.0
+    hooks:
+      - id: golangci-lint
+        args: [--timeout=3m]
+  - repo: https://github.com/TekWizely/pre-commit-golang
+    rev: v1.0.0-rc.1
+    hooks:
+      - id: go-fmt
+      - id: go-test-mod
+      - id: go-mod-tidy
