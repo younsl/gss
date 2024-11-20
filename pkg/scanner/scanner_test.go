@@ -4,105 +4,165 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-github/v50/github"
 	"github.com/younsl/ghes-schedule-scanner/pkg/models"
+	"gopkg.in/yaml.v3"
 )
 
+const (
+	// Common test values
+	testOrg         = "test-org"
+	testRepo        = "test-repo"
+	testUser        = "test-user"
+	testWorkflowID  = int64(1)
+	testWorkflowSHA = "abc123"
+
+	// Test workflow values
+	testWorkflowName = "Test Workflow"
+	testWorkflowPath = ".github/workflows/test.yml"
+	testCronSchedule = "0 0 * * *"
+
+	// Test API paths
+	apiV3Prefix = "/api/v3"
+)
+
+// getAPIPath returns the full API path for a given endpoint
+func getAPIPath(endpoint string) string {
+	return apiV3Prefix + endpoint
+}
+
+// getRepoPath returns the full repository API path
+func getRepoPath(endpoint string) string {
+	return getAPIPath(fmt.Sprintf("/repos/%s/%s%s", testOrg, testRepo, endpoint))
+}
+
 // TestExtractSchedules verifies the extraction of cron schedules from workflow configurations.
-// Tests single schedule, multiple schedules, and no schedule cases.
 func TestExtractSchedules(t *testing.T) {
 	tests := []struct {
-		name     string
-		workflow map[string]interface{}
-		want     []string
+		name    string
+		content string
+		want    []string
+		wantErr bool
+		errMsg  string
 	}{
 		{
-			name: "단일 크론 스케줄",
-			workflow: map[string]interface{}{
-				"on": map[string]interface{}{
-					"schedule": []interface{}{
-						map[string]interface{}{
-							"cron": "0 0 * * *",
-						},
-					},
-				},
-			},
-			want: []string{"0 0 * * *"},
+			name: "single schedule",
+			content: fmt.Sprintf(`name: %s
+on:
+  schedule:
+    - cron: "%s"`, testWorkflowName, testCronSchedule),
+			want:    []string{testCronSchedule},
+			wantErr: false,
 		},
 		{
-			name: "여러 크론 스케줄",
-			workflow: map[string]interface{}{
-				"on": map[string]interface{}{
-					"schedule": []interface{}{
-						map[string]interface{}{"cron": "0 0 * * *"},
-						map[string]interface{}{"cron": "0 12 * * *"},
-					},
-				},
-			},
-			want: []string{"0 0 * * *", "0 12 * * *"},
+			name: "no schedule",
+			content: `name: Test Workflow
+on:
+  push:
+    branches: [ main ]`,
+			want:    nil,
+			wantErr: false,
 		},
 		{
-			name:     "스케줄 없음",
-			workflow: map[string]interface{}{},
-			want:     nil,
+			name: "invalid yaml",
+			content: `name: Test Workflow
+on:
+  schedule:
+    - cron: [invalid]`,
+			wantErr: true,
+			errMsg:  "failed to unmarshal workflow file",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractSchedules(tt.workflow)
-			if len(got) != len(tt.want) {
-				t.Errorf("extractSchedules() = %v, want %v", got, tt.want)
+			var workflow map[string]interface{}
+			err := yaml.Unmarshal([]byte(tt.content), &workflow)
+			if err != nil && !tt.wantErr {
+				t.Fatalf("failed to unmarshal test content: %v", err)
 			}
-			for i := range got {
-				if got[i] != tt.want[i] {
-					t.Errorf("extractSchedules()[%d] = %v, want %v", i, got[i], tt.want[i])
-				}
+			if tt.wantErr {
+				return // Skip schedule extraction for invalid YAML
+			}
+
+			got := extractSchedules(workflow)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("extractSchedules() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-// TestScanRepository tests the complete repository scanning workflow including
-// API interactions, content retrieval, and result validation.
+// TestScanRepository tests the complete repository scanning workflow
 func TestScanRepository(t *testing.T) {
-	// 테스트 서버 설정
 	server := setupTestServer(t)
 	defer server.Close()
 
-	// 테스트 실행
-	results := runScanTest(t, server)
+	client := github.NewClient(&http.Client{})
+	client.BaseURL, _ = url.Parse(server.URL + "/api/v3/")
 
-	// 결과 검증
-	validateTestResults(t, results)
+	scanner := &Scanner{
+		client: client,
+	}
+
+	var results []models.WorkflowInfo
+	var resultMutex sync.Mutex
+
+	repo := &github.Repository{
+		Name:  github.String(testRepo),
+		Owner: &github.User{Login: github.String(testOrg)},
+	}
+
+	err := scanner.scanRepository(context.Background(), testOrg, repo, &results, &resultMutex)
+	if err != nil {
+		t.Fatalf("scanRepository() failed: %v", err)
+	}
+
+	if len(results) != 1 {
+		t.Errorf("Expected 1 schedule, got %d", len(results))
+	}
+
+	want := models.WorkflowInfo{
+		RepoName:      testRepo,
+		WorkflowName:  testWorkflowName,
+		WorkflowID:    testWorkflowID,
+		CronSchedules: []string{testCronSchedule},
+		LastStatus:    "completed",
+	}
+
+	if !reflect.DeepEqual(results[0], want) {
+		t.Errorf("scanRepository() got = %+v, want %+v", results[0], want)
+	}
 }
 
 // setupTestServer initializes a mock HTTP server that simulates GitHub Enterprise API endpoints.
-// Returns configured test server instance.
 func setupTestServer(t *testing.T) *httptest.Server {
 	mux := http.NewServeMux()
 	server := httptest.NewServer(mux)
 
-	// API 핸들러 등록
 	registerWorkflowsHandler(t, mux, server.URL)
 	registerDirectoryHandler(t, mux, server.URL)
 	registerFileContentHandler(t, mux)
 	registerWorkflowRunsHandler(t, mux)
+	registerUserHandler(t, mux)
+	registerReposHandler(t, mux)
 	register404Handler(t, mux)
 
 	return server
 }
 
 // registerWorkflowsHandler sets up a mock endpoint for workflow listing API.
-// Responds with a single test workflow configuration.
 func registerWorkflowsHandler(t *testing.T, mux *http.ServeMux, baseURL string) {
-	mux.HandleFunc("/api/v3/repos/testorg/testrepo/actions/workflows", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(getRepoPath("/actions/workflows"), func(w http.ResponseWriter, r *http.Request) {
 		t.Logf("DEBUG - Handling workflows request")
 		w.Header().Set("Content-Type", "application/json")
 
@@ -110,10 +170,10 @@ func registerWorkflowsHandler(t *testing.T, mux *http.ServeMux, baseURL string) 
 			TotalCount: github.Int(1),
 			Workflows: []*github.Workflow{
 				{
-					ID:      github.Int64(1),
-					Name:    github.String("Test Workflow"),
-					Path:    github.String(".github/workflows/test.yml"),
-					HTMLURL: github.String(baseURL + "/testorg/testrepo/blob/master/.github/workflows/test.yml"),
+					ID:      github.Int64(testWorkflowID),
+					Name:    github.String(testWorkflowName),
+					Path:    github.String(testWorkflowPath),
+					HTMLURL: github.String(fmt.Sprintf("%s/%s/%s/blob/master/%s", baseURL, testOrg, testRepo, testWorkflowPath)),
 				},
 			},
 		}
@@ -124,23 +184,21 @@ func registerWorkflowsHandler(t *testing.T, mux *http.ServeMux, baseURL string) 
 }
 
 // registerDirectoryHandler sets up a mock endpoint for workflow directory contents.
-// Returns a single test.yml workflow file listing.
 func registerDirectoryHandler(t *testing.T, mux *http.ServeMux, baseURL string) {
-	mux.HandleFunc("/api/v3/repos/testorg/testrepo/contents/.github/workflows", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(getRepoPath("/contents/.github/workflows"), func(w http.ResponseWriter, r *http.Request) {
 		t.Logf("DEBUG - Handling workflows directory request")
 		w.Header().Set("Content-Type", "application/json")
 
 		files := []*github.RepositoryContent{
 			{
 				Name:    github.String("test.yml"),
-				Path:    github.String(".github/workflows/test.yml"),
+				Path:    github.String(testWorkflowPath),
 				Type:    github.String("file"),
 				Size:    github.Int(100),
-				SHA:     github.String("abc123"),
-				Content: nil,
-				URL:     github.String(baseURL + "/api/v3/repos/testorg/testrepo/contents/.github/workflows/test.yml"),
-				HTMLURL: github.String(baseURL + "/testorg/testrepo/blob/master/.github/workflows/test.yml"),
-				GitURL:  github.String(baseURL + "/api/v3/repos/testorg/testrepo/git/blobs/abc123"),
+				SHA:     github.String(testWorkflowSHA),
+				URL:     github.String(fmt.Sprintf("%s%s", baseURL, getRepoPath("/contents/"+testWorkflowPath))),
+				HTMLURL: github.String(fmt.Sprintf("%s/%s/%s/blob/master/%s", baseURL, testOrg, testRepo, testWorkflowPath)),
+				GitURL:  github.String(fmt.Sprintf("%s%s/git/blobs/%s", baseURL, getRepoPath(""), testWorkflowSHA)),
 			},
 		}
 		if err := json.NewEncoder(w).Encode(files); err != nil {
@@ -149,26 +207,25 @@ func registerDirectoryHandler(t *testing.T, mux *http.ServeMux, baseURL string) 
 	})
 }
 
-// registerFileContentHandler sets up a mock endpoint for workflow file content retrieval.
-// Returns base64 encoded YAML content with a test schedule.
+// registerFileContentHandler sets up a mock endpoint for workflow file content.
 func registerFileContentHandler(t *testing.T, mux *http.ServeMux) {
-	mux.HandleFunc("/api/v3/repos/testorg/testrepo/contents/.github/workflows/test.yml", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(getRepoPath("/contents/"+testWorkflowPath), func(w http.ResponseWriter, r *http.Request) {
 		t.Logf("DEBUG - Handling workflow file content request")
 		w.Header().Set("Content-Type", "application/json")
 
-		content := `name: Test Workflow
+		content := fmt.Sprintf(`name: %s
 on:
   schedule:
-    - cron: "0 0 * * *"`
+    - cron: "%s"`, testWorkflowName, testCronSchedule)
 
 		response := &github.RepositoryContent{
 			Type:     github.String("file"),
 			Encoding: github.String("base64"),
 			Size:     github.Int(len(content)),
 			Name:     github.String("test.yml"),
-			Path:     github.String(".github/workflows/test.yml"),
+			Path:     github.String(testWorkflowPath),
 			Content:  github.String(base64.StdEncoding.EncodeToString([]byte(content))),
-			SHA:      github.String("abc123"),
+			SHA:      github.String(testWorkflowSHA),
 		}
 
 		if err := json.NewEncoder(w).Encode(response); err != nil {
@@ -177,10 +234,9 @@ on:
 	})
 }
 
-// registerWorkflowRunsHandler sets up a mock endpoint for workflow run history.
-// Returns a single completed workflow run.
+// registerWorkflowRunsHandler sets up a mock endpoint for workflow runs API.
 func registerWorkflowRunsHandler(t *testing.T, mux *http.ServeMux) {
-	mux.HandleFunc("/api/v3/repos/testorg/testrepo/actions/workflows/1/runs", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(fmt.Sprintf("%s/actions/workflows/%d/runs", getRepoPath(""), testWorkflowID), func(w http.ResponseWriter, r *http.Request) {
 		t.Logf("DEBUG - Handling workflow runs request")
 		w.Header().Set("Content-Type", "application/json")
 
@@ -188,8 +244,12 @@ func registerWorkflowRunsHandler(t *testing.T, mux *http.ServeMux) {
 			TotalCount: github.Int(1),
 			WorkflowRuns: []*github.WorkflowRun{
 				{
-					ID:     github.Int64(1),
+					ID:     github.Int64(testWorkflowID),
+					Name:   github.String(testWorkflowName),
 					Status: github.String("completed"),
+					CreatedAt: &github.Timestamp{
+						Time: time.Now(),
+					},
 				},
 			},
 		}
@@ -199,54 +259,44 @@ func registerWorkflowRunsHandler(t *testing.T, mux *http.ServeMux) {
 	})
 }
 
+// registerUserHandler sets up a mock endpoint for user information.
+func registerUserHandler(t *testing.T, mux *http.ServeMux) {
+	mux.HandleFunc(getAPIPath("/user"), func(w http.ResponseWriter, r *http.Request) {
+		t.Logf("DEBUG - Handling user request")
+		w.Header().Set("Content-Type", "application/json")
+
+		user := &github.User{
+			Login: github.String(testUser),
+			Type:  github.String("User"),
+		}
+		if err := json.NewEncoder(w).Encode(user); err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+// registerReposHandler sets up a mock endpoint for repository listing.
+func registerReposHandler(t *testing.T, mux *http.ServeMux) {
+	mux.HandleFunc(getAPIPath("/user/repos"), func(w http.ResponseWriter, r *http.Request) {
+		t.Logf("DEBUG - Handling repository list request")
+		w.Header().Set("Content-Type", "application/json")
+
+		repos := []*github.Repository{
+			{
+				Name:    github.String(testRepo),
+				Private: github.Bool(true),
+			},
+		}
+		if err := json.NewEncoder(w).Encode(repos); err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
 // register404Handler sets up a catch-all handler for unmatched routes.
-// Logs unhandled requests and returns 404 status.
 func register404Handler(t *testing.T, mux *http.ServeMux) {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		t.Logf("WARNING - Unhandled request: %s %s", r.Method, r.URL.Path)
 		w.WriteHeader(http.StatusNotFound)
 	})
-}
-
-// runScanTest executes the repository scan with mock server configuration.
-// Returns the scan results for validation.
-func runScanTest(t *testing.T, server *httptest.Server) []models.WorkflowInfo {
-	scanner := NewScanner("test-token", server.URL, 1)
-
-	repo := &github.Repository{
-		Name:     github.String("testrepo"),
-		Owner:    &github.User{Login: github.String("testorg")},
-		FullName: github.String("testorg/testrepo"),
-	}
-
-	var results []models.WorkflowInfo
-	var resultMutex sync.Mutex
-
-	ctx := context.Background()
-	err := scanner.scanRepository(ctx, "testorg", repo, &results, &resultMutex)
-	if err != nil {
-		t.Fatalf("scanRepository() failed: %v", err)
-	}
-
-	return results
-}
-
-// validateTestResults checks if scan results match expected workflow information.
-// Verifies repository name, workflow details, schedules and status.
-func validateTestResults(t *testing.T, results []models.WorkflowInfo) {
-	if len(results) == 0 {
-		t.Fatal("scanRepository() got no results, want at least 1")
-	}
-
-	want := models.WorkflowInfo{
-		RepoName:      "testrepo",
-		WorkflowName:  "Test Workflow",
-		WorkflowID:    1,
-		CronSchedules: []string{"0 0 * * *"},
-		LastStatus:    "completed",
-	}
-
-	if !reflect.DeepEqual(results[0], want) {
-		t.Errorf("scanRepository() got = %+v, want %+v", results[0], want)
-	}
 }

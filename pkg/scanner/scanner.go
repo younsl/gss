@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -21,12 +22,19 @@ type Scanner struct {
 }
 
 // NewScanner creates a new Scanner instance with the given token, base URL and concurrent scan limit
-func NewScanner(token string, baseURL string, concurrentScans int) *Scanner {
+func NewScanner(token string, baseURL string, concurrentScans int) (*Scanner, error) {
 	client := initializeGitHubClient(token, baseURL)
-	return &Scanner{
+	scanner := &Scanner{
 		client:          client,
 		concurrentScans: concurrentScans,
 	}
+
+	// Validate token permissions
+	if err := scanner.ValidateToken(context.Background()); err != nil {
+		return nil, fmt.Errorf("token validation failed: %w", err)
+	}
+
+	return scanner, nil
 }
 
 // ScanScheduledWorkflows scans all repositories in an organization for scheduled workflows
@@ -204,4 +212,48 @@ func initializeGitHubClient(token, baseURL string) *github.Client {
 		log.Fatalf("Failed to create GitHub client: %v", err)
 	}
 	return client
+}
+
+// ValidateToken checks if the provided GitHub PAT is valid and has necessary permissions
+func (s *Scanner) ValidateToken(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	// Step 1: Verify token is valid
+	user, resp, err := s.client.Users.Get(ctx, "")
+	if err != nil {
+		if resp != nil && resp.StatusCode == 401 {
+			if ghErr, ok := err.(*github.ErrorResponse); ok {
+				if strings.Contains(ghErr.Message, "Bad credentials") {
+					return fmt.Errorf("token has expired or is invalid: %w", err)
+				}
+			}
+			return fmt.Errorf("authentication failed: %w", err)
+		}
+		return fmt.Errorf("failed to validate token: %w", err)
+	}
+
+	// Step 2: Verify repo:* scope by attempting to list private repositories
+	opts := &github.RepositoryListOptions{
+		ListOptions: github.ListOptions{
+			PerPage: 1,
+		},
+		Type:      "private",
+		Sort:      "updated",
+		Direction: "desc",
+	}
+
+	_, resp, err = s.client.Repositories.List(ctx, user.GetLogin(), opts)
+	if err != nil {
+		if resp != nil && resp.StatusCode == 403 {
+			return fmt.Errorf("token lacks required repository access permissions (repo:*): %w", err)
+		}
+		if resp != nil && resp.StatusCode == 404 {
+			return fmt.Errorf("user or organization not found: %w", err)
+		}
+		return fmt.Errorf("failed to validate repository permissions: %w", err)
+	}
+
+	return nil
 }

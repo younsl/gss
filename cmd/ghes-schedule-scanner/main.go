@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -14,7 +15,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
-	scanner := initializeScanner(cfg)
+
+	scanner, err := initializeScanner(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize scanner: %v", err)
+	}
+
 	reporter := initializeReporter()
 
 	result, err := scanner.ScanScheduledWorkflows(cfg.GitHubOrganization)
@@ -39,10 +45,13 @@ func initializeConfig() (*config.Config, error) {
 	return cfg, nil
 }
 
-func initializeScanner(cfg *config.Config) *scanner.Scanner {
-	scanner := scanner.NewScanner(cfg.GitHubToken, cfg.GitHubBaseURL, cfg.ConcurrentScans)
+func initializeScanner(cfg *config.Config) (*scanner.Scanner, error) {
+	scanner, err := scanner.NewScanner(cfg.GitHubToken, cfg.GitHubBaseURL, cfg.ConcurrentScans)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create scanner: %w", err)
+	}
 	log.Printf("GitHub Base URL: %s", cfg.GitHubBaseURL)
-	return scanner
+	return scanner, nil
 }
 
 func initializeReporter() *reporter.Reporter {
