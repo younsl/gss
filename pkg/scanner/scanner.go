@@ -148,6 +148,31 @@ func (s *Scanner) scanRepository(ctx context.Context, org string, repo *github.R
 			lastStatus = runs.WorkflowRuns[0].GetStatus()
 		}
 
+		// 워크플로우 파일의 마지막 커밋 정보 가져오기
+		commits, _, err := s.client.Repositories.ListCommits(ctx, org, repo.GetName(), &github.CommitsListOptions{
+			Path:        workflow.GetPath(),
+			ListOptions: github.ListOptions{PerPage: 1},
+		})
+		if err != nil {
+			log.Printf("Failed to get commits for %s: %v", workflow.GetPath(), err)
+			continue
+		}
+
+		lastCommitter := "Unknown"
+		if len(commits) > 0 {
+			commit := commits[0]
+			if author := commit.GetAuthor(); author != nil {
+				lastCommitter = author.GetLogin()
+			}
+			// fallback: committer가 없는 경우 commit.author.name 사용
+			if lastCommitter == "" && commit.Commit != nil && commit.Commit.Author != nil {
+				lastCommitter = commit.Commit.Author.GetName()
+			}
+			if lastCommitter == "" {
+				lastCommitter = "Unknown"
+			}
+		}
+
 		resultMutex.Lock()
 		*results = append(*results, models.WorkflowInfo{
 			RepoName:      repo.GetName(),
@@ -155,6 +180,7 @@ func (s *Scanner) scanRepository(ctx context.Context, org string, repo *github.R
 			WorkflowID:    workflow.GetID(),
 			CronSchedules: schedules,
 			LastStatus:    lastStatus,
+			LastCommitter: lastCommitter,
 		})
 		resultMutex.Unlock()
 	}

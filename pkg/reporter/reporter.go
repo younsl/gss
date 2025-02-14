@@ -34,17 +34,18 @@ func (f *ConsoleFormatter) FormatReport(result *models.ScanResult) string {
 
 	var sb strings.Builder
 	sb.WriteString("Scheduled Workflows Summary:\n")
-	sb.WriteString(fmt.Sprintf("%-3s   %-35s   %-35s   %-13s   %-13s   %s\n",
-		"NO", "REPOSITORY", "WORKFLOW", "UTC SCHEDULE", "KST SCHEDULE", "LAST STATUS"))
+	sb.WriteString(fmt.Sprintf("%-3s %-35s %-35s %-13s %-13s %-15s %s\n",
+		"NO", "REPOSITORY", "WORKFLOW", "UTC SCHEDULE", "KST SCHEDULE", "LAST COMMITTER", "LAST STATUS"))
 
 	for i, wf := range result.Workflows {
 		for _, schedule := range wf.CronSchedules {
-			sb.WriteString(fmt.Sprintf("%-3d   %-35s   %-35s   %-13s   %-13s   %s\n",
+			sb.WriteString(fmt.Sprintf("%-3d %-35s %-35s %-13s %-13s %-15s %s\n",
 				i+1,
 				truncateString(wf.RepoName, 35),
 				truncateString(wf.WorkflowName, 35),
 				schedule,
 				convertToKST(schedule),
+				truncateString(wf.LastCommitter, 15),
 				wf.LastStatus,
 			))
 		}
