@@ -2,6 +2,8 @@
 
 A Kubernetes CronJob-based scanning server that scans and analyzes scheduled workflows in GitHub Enterprise Server.
 
+![System Architecture](./docs/assets/images/1.png)
+
 ## Features
 
 - Scan scheduled workflows across all repositories in an organization
