@@ -10,6 +10,7 @@ metadata:
   {{- end }}
 spec:
   schedule: {{ .Values.schedule | quote }}
+  timeZone: {{ .Values.timeZone | default "Etc/UTC" }}
   successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit }}
   failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit }}
   ttlSecondsAfterFinished: {{ .Values.ttlSecondsAfterFinished }}

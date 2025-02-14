@@ -14,6 +14,11 @@ image:
 # minute (0-59), hour (0-23), day of month (1-31), month (1-12), day of week (0-7), `*` means all
 schedule: "0 1 * * *"
 
+# -- Timezone for the CronJob
+# This value is used to configure the timezone for the CronJob.
+# Available timezone list: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+timeZone: "Etc/UTC"
+
 # -- TTL in seconds for finished jobs
 # This value is used to delete finished jobs after a certain period of time.
 # This helps to reduce the number of old job pods that are kept in the cluster.
