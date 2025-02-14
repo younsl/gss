@@ -6,6 +6,7 @@ type WorkflowInfo struct {
 	WorkflowID    int64
 	CronSchedules []string
 	LastStatus    string
+	LastCommitter string
 }
 
 type ScanResult struct {
