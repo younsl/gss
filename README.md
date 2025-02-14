@@ -1,16 +1,19 @@
 # GHES Schedule Scanner (GSS)
 
-A Kubernetes CronJob-based scanning server that scans and analyzes scheduled workflows in GitHub Enterprise Server.
+A Kubernetes add-on for DevOps and SRE teams to monitor and analyze CI/CD workflows in GitHub Enterprise Server. GSS runs as a kubernetes [cronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/) that scans and analyzes scheduled workflows across your GHES environment.
 
 ![System Architecture](./docs/assets/images/1.png)
 
+GHES Schedule Scanner runs as a kubernetes cronJob that periodically scans GitHub Enterprise Server repositories for scheduled workflows. It collects information about workflow name, workflow schedules, last execution status, and last committer details across all repositories in an organization. GHES schedule scanner is designed for high performance with parallel scanning capabilities using Go routines and provides timezone conversion between UTC and KST for better schedule visibility.
+
 ## Features
 
+- Compatible with self-hosted GitHub Enterprise Server (3.11+)
 - Scan scheduled workflows across all repositories in an organization
 - UTC/KST timezone conversion support
 - Workflow execution status monitoring
 - Parallel scanning support
-- High performance repository scanning (900+ repositories in ~19 seconds)
+- High performance repository scanning (scans 900+ repositories in about 20-22 seconds)
 
 ## Installation
 
@@ -66,15 +69,15 @@ kubectl logs -l app.kubernetes.io/name=ghes-schedule-scanner -n gss
 Scheduled workflow scanning output example is as follows:
 
 ```bash
-2024/11/14 12:48:19 Scan completed: 930 repositories in 18.570823763s with max 10 concurrent goroutines
+2025/02/14 10:19:23 Scan completed: 937 repositories in 22.726351349s with max 10 concurrent goroutines
 Scheduled Workflows Summary:
-NO    REPOSITORY                            WORKFLOW                              UTC SCHEDULE    KST SCHEDULE    LAST STATUS
-1     mock-service-a                        Cleanup Job                           0 0 * * *       0 9 * * *       Unknown
-2     mock-service-b                        Health Check                          */30 * * * *    */30 * * * *    completed
-3     mock-repo-c                           Backup Database                       0 18 * * *      0 3 * * *       completed
+NO  REPOSITORY                          WORKFLOW                           UTC SCHEDULE  KST SCHEDULE  LAST COMMITTER  LAST STATUS
+1   payment-service                     Cleanup Old Artifacts              0 15 * * *    0 0 * * *     john-doe        completed
+2   ip-address-monitor                  IP Range Sync                      0 * * * *     0 9 * * *     sarah-kim       completed
+3   docker-images                       Build Docker Images                0 20 * * *    0 5 * * *     mike-zhang      completed
 ...
 
-Scanned: 930 repos, 27 workflows
+Scanned: 937 repos, 27 workflows
 ```
 
 ## License
