@@ -8,6 +8,9 @@ image:
   # -- Container image tag (If not set, will use Chart's appVersion by default.)
   tag: null
 
+# -- Restart policy. Available values: Always, Never, OnFailure (default: Never)
+restartPolicy: Never
+
 # -- CronJob schedule in Cron format (UTC)
 # This value is used to configure the schedule for the CronJob.
 # Cron expression details:
@@ -48,14 +51,18 @@ configMap:
     # -- GitHub Enterprise organization name
     # Organization name is used to scan all repositories for the given organization
     GITHUB_ORGANIZATION: "example-org"
+
     # -- GitHub Enterprise base URL
     # The API endpoint will be automatically appended with '/api/v3'
     # For example: https://github.example.com/api/v3
     GITHUB_BASE_URL: "https://github.example.com"
+
     # -- Application log level
     LOG_LEVEL: "INFO"
+
     # -- HTTP request timeout in seconds
     REQUEST_TIMEOUT: "30"
+
     # -- Number of concurrent repository scans
     # This value is used to limit the number of concurrent goroutines
     # that are scanning repositories.
@@ -65,6 +72,28 @@ configMap:
     # - Network conditions between your cluster and GitHub Enterprise
     # Typical values range from 10-50, but can be higher if needed.
     CONCURRENT_SCANS: "10"
+
+    # -- Slack Bot Token to create a canvas page in Slack channel. Do not use a slack app token.
+    # How to get:
+    # 1. Go to https://api.slack.com/apps
+    # 2. Select your app > "OAuth & Permissions"
+    # 3. Copy "Bot User OAuth Token" starting with `xoxb-`
+    SLACK_BOT_TOKEN: null
+
+    # -- Slack Channel ID to create a canvas page in Slack channel
+    # How to get:
+    # 1. Click channel name in Slack
+    # 2. Click "View channel details"
+    # 3. Scroll to bottom and copy Channel ID starting with `C`
+    SLACK_CHANNEL_ID: null
+
+    # -- Slack Canvas ID to update a canvas page in Slack channel.
+    # Slack Canvas URL have the following format:
+    # https://<WORKSPACE>.slack.com/docs/<CHANNEL_ID>/<CANVAS_ID>
+    # How to get:
+    # 1. Copy the last part from Canvas URL you want to update
+    # Canvas URL format: https://workspace.slack.com/docs/CHANNEL_ID/CANVAS_ID
+    SLACK_CANVAS_ID: null
 
 # -- Name of the secret containing sensitive data
 # This secret is used to store the GitHub access token with permissions

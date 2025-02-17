@@ -60,6 +60,21 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.secretName }}
                   key: GITHUB_TOKEN
+            - name: SLACK_BOT_TOKEN
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Chart.Name }}-config
+                  key: SLACK_BOT_TOKEN
+            - name: SLACK_CHANNEL_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Chart.Name }}-config
+                  key: SLACK_CHANNEL_ID
+            - name: SLACK_CANVAS_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Chart.Name }}-config
+                  key: SLACK_CANVAS_ID
             resources:
               limits:
                 cpu: {{ .Values.resources.limits.cpu }}
@@ -67,7 +82,7 @@ spec:
               requests:
                 cpu: {{ .Values.resources.requests.cpu }}
                 memory: {{ .Values.resources.requests.memory }}
-          restartPolicy: OnFailure
+          restartPolicy: {{ .Values.restartPolicy }}
           {{- with .Values.nodeSelector }}
           nodeSelector:
             {{- toYaml . | nindent 12 }}
