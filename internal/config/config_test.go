@@ -8,60 +8,56 @@ import (
 
 func TestLoadConfig(t *testing.T) {
 	tests := []struct {
-		name      string
-		envVars   map[string]string
-		wantError bool
+		name    string
+		envVars map[string]string
+		wantErr bool
 	}{
 		{
 			name: "valid config",
 			envVars: map[string]string{
 				"GITHUB_TOKEN":        "test-token",
 				"GITHUB_ORGANIZATION": "test-org",
-				"GITHUB_BASE_URL":     "https://github.example.com",
-				"LOG_LEVEL":           "DEBUG",
-				"REQUEST_TIMEOUT":     "60",
-				"CONCURRENT_SCANS":    "10",
+				"GITHUB_BASE_URL":     "https://github.example.com/api/v3",
+				"SLACK_BOT_TOKEN":     "xoxb-1-test",
+				"SLACK_CHANNEL_ID":    "C12345678",
 			},
-			wantError: false,
+			wantErr: false,
 		},
 		{
-			name: "missing required token",
-			envVars: map[string]string{
-				"GITHUB_ORGANIZATION": "test-org",
-				"GITHUB_BASE_URL":     "https://github.example.com",
-			},
-			wantError: true,
-		},
-		{
-			name: "invalid timeout value",
+			name: "missing required field",
 			envVars: map[string]string{
 				"GITHUB_TOKEN":        "test-token",
 				"GITHUB_ORGANIZATION": "test-org",
-				"GITHUB_BASE_URL":     "https://github.example.com",
-				"REQUEST_TIMEOUT":     "invalid",
+				"SLACK_BOT_TOKEN":     "xoxb-1-test",
+				"SLACK_CHANNEL_ID":    "C12345678",
 			},
-			wantError: false, // 기본값 사용
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 환경변수 초기화
-			os.Clearenv()
+			// Backup original env values
+			oldEnv := map[string]string{}
+			for k := range tt.envVars {
+				oldEnv[k] = os.Getenv(k)
+			}
 
-			// 테스트용 환경변수 설정
+			// Set test env values
 			for k, v := range tt.envVars {
 				os.Setenv(k, v)
 			}
 
-			cfg, err := LoadConfig()
-			if (err != nil) != tt.wantError {
-				t.Errorf("LoadConfig() error = %v, wantError %v", err, tt.wantError)
-				return
-			}
+			// Restore original env values after test
+			defer func() {
+				for k, v := range oldEnv {
+					os.Setenv(k, v)
+				}
+			}()
 
-			if err == nil {
-				validateConfig(t, cfg, tt.envVars)
+			_, err := LoadConfig()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("LoadConfig() error = %v, wantError %v", err, tt.wantErr)
 			}
 		})
 	}

@@ -29,3 +29,15 @@ Sets container image tag (uses .Chart.AppVersion if .Values.image.tag is not def
 {{- define "ghes-schedule-scanner.imageTag" -}}
 {{- .Values.image.tag | default .Chart.AppVersion -}}
 {{- end -}}
+
+{{/*
+configMap data helper
+This helper template iterates through configMap.data values defined in values.yaml and generates configMap data entries.
+*/}}
+{{- define "ghes-schedule-scanner.configMapData" -}}
+{{- range $key, $value := .Values.configMap.data }}
+{{- if $value }}
+{{ $key }}: {{ $value | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
