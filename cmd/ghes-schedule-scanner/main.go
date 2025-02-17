@@ -1,42 +1,56 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"os"
 
 	"github.com/younsl/ghes-schedule-scanner/internal/config"
+	"github.com/younsl/ghes-schedule-scanner/pkg/canvas"
 	"github.com/younsl/ghes-schedule-scanner/pkg/reporter"
 	"github.com/younsl/ghes-schedule-scanner/pkg/scanner"
 )
 
-func main() {
-	cfg, err := initializeConfig()
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
-	scanner := initializeScanner(cfg)
-	reporter := initializeReporter()
-
-	result, err := scanner.ScanScheduledWorkflows(cfg.GitHubOrganization)
-	if err != nil {
-		log.Fatalf("Scan failed: %v", err)
-	}
-
-	if err := reporter.GenerateReport(result); err != nil {
-		log.Fatalf("Report generation failed: %v", err)
-	}
-
-	log.Println("Workflow scan completed successfully")
-	os.Exit(0)
+type app struct {
+	scanner   *scanner.Scanner
+	reporter  *reporter.Reporter
+	publisher *canvas.CanvasPublisher
 }
 
-func initializeConfig() (*config.Config, error) {
+func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Workflow scan completed successfully")
+}
+
+func run() error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return nil, err
+		log.Printf("Config values: %+v", cfg)
+		return fmt.Errorf("failed to load config: %w", err)
 	}
-	setLogLevel(cfg.LogLevel)
-	return cfg, nil
+
+	scanner := initializeScanner(cfg)
+
+	// Scan workflows
+	result, err := scanner.ScanScheduledWorkflows(cfg.GitHubOrganization)
+	if err != nil {
+		return fmt.Errorf("workflow scan failed: %w", err)
+	}
+
+	// Create canvas publisher
+	publisher := canvas.NewCanvasPublisher(
+		cfg.SlackBotToken,
+		cfg.SlackChannelID,
+		cfg.SlackCanvasID,
+	)
+
+	// Publish results to Slack Canvas
+	if err := publisher.PublishScanResult(result); err != nil {
+		return fmt.Errorf("failed to publish to canvas: %w", err)
+	}
+
+	return nil
 }
 
 func initializeScanner(cfg *config.Config) *scanner.Scanner {
@@ -50,7 +64,14 @@ func initializeReporter() *reporter.Reporter {
 	return reporter.NewReporter(formatter)
 }
 
-// setLogLevel 함수는 로그 레벨을 설정합니다.
+func initializeCanvasPublisher(cfg *config.Config) *canvas.CanvasPublisher {
+	return canvas.NewCanvasPublisher(
+		cfg.SlackBotToken,
+		cfg.SlackChannelID,
+		cfg.SlackCanvasID,
+	)
+}
+
 func setLogLevel(level string) {
 	switch level {
 	case "DEBUG":

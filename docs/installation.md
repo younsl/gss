@@ -32,7 +32,27 @@ kubectl create secret generic ghes-schedule-scanner-secret \
     --from-literal GITHUB_TOKEN=ghp_<CLASSIC_TOKEN>
 ```
 
-2. Install Helm Chart
+2. Create slack credentials to publish canvas page
+
+GSS pod uses Slack Bot Token to create a canvas page in Slack channel. Slack Bot Token can be created from [Slack API](https://api.slack.com/apps).
+
+- **Slack Bot Token**: Not slack app token, only slack bot token is supported. Slack bot token starts with `xoxb-`.
+- **Slack Channel ID**: Channel ID where the canvas will be created. Channel ID is a string of numbers starting with `C`.
+- **Slack Canvas ID**: Canvas ID to update. Canvas ID is a string of numbers starting with `F`.
+
+Configure these credentials in `values.yaml` file. These credentials are used by GSS pod to publish a canvas page in your slack channel.
+
+```yaml
+# hack/charts/ghes-schedule-scanner/values.yaml
+configMap:
+  data:
+    # ... omitted for brevity ...
+    SLACK_BOT_TOKEN: xoxb-<SLACK_BOT_TOKEN>
+    SLACK_CHANNEL_ID: F01234ABCD
+    SLACK_CANVAS_ID: C01234ABCD
+```
+
+3. Install Helm Chart
 
 Install [ghes-schedule-scanner](https://github.com/younsl/gss/tree/main/hack/charts/ghes-schedule-scanner) helm chart in the `gss` namespace:
 
@@ -48,7 +68,7 @@ helm upgrade \
 
 You can use the same command to update and apply helm chart configurations later.
 
-## Output Example
+### Output Example
 
 You can run the following command to check the scanning output:
 
@@ -56,16 +76,48 @@ You can run the following command to check the scanning output:
 kubectl logs -l app.kubernetes.io/name=ghes-schedule-scanner -n gss
 ```
 
-Scheduled workflow scanning output example is as follows:
+You can see all scheduled workflows in the canvas page. Canvas URL format is follows: `https://<WORKSPACE>.slack.com/docs/<CHANNEL_ID>/<CANVAS_ID>`.
+
+Scheduled workflow scanning output example in slack canvas page formatting with markdown:
 
 ```bash
-2025/02/14 10:19:23 Scan completed: 937 repositories in 22.726351349s with max 10 concurrent goroutines
-Scheduled Workflows Summary:
-NO  REPOSITORY                          WORKFLOW                           UTC SCHEDULE  KST SCHEDULE  LAST COMMITTER  LAST STATUS
-1   payment-service                     Cleanup Old Artifacts              0 15 * * *    0 0 * * *     john-doe        completed
-2   ip-address-monitor                  IP Range Sync                      0 * * * *     0 9 * * *     sarah-kim       completed
-3   docker-images                       Build Docker Images                0 20 * * *    0 5 * * *     mike-zhang      completed
-...
+GHES Scheduled Workflows
 
-Scanned: 937 repos, 27 workflows
+📊 Scan Summary • Total Repositories: 152 • Scheduled Workflows: 12 • Unknown Committers: 3 
+Last Updated: 2024-03-19T09:15:33Z by GHES Schedule Scanner
+
+* [1] backend-api
+  * Workflow: Clean up old artifacts
+  * UTC Schedule: 0 0 * * *
+  * KST Schedule: 0 9 * * *
+  * Last Status: ✅ completed
+  * Last Committer: mike-zhang
+* [2] monitoring
+  * Workflow: Refresh metrics dashboard
+  * UTC Schedule: */30 * * * *
+  * KST Schedule: */30 * * * * 
+  * Last Status: ✅ completed
+  * Last Committer: sarah-kim
+* [3] infrastructure
+  * Workflow: Backup database
+  * UTC Schedule: 0 18 * * *
+  * KST Schedule: 0 3 * * *
+  * Last Status: ✅ completed
+  * Last Committer: alice-park
+```
+
+## Helm uninstall
+
+Delete the GSS helm chart from `gss` namespace:
+
+```bash
+helm uninstall ghes-schedule-scanner -n gss
+helm list -n gss
+```
+
+Then delete kubernetes secret and namespace:
+
+```bash
+kubectl delete secret ghes-schedule-scanner-secret -n gss
+kubectl delete namespace gss
 ```
