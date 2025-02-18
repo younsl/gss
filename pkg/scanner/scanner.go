@@ -237,10 +237,13 @@ func extractSchedules(workflow map[string]interface{}) []string {
 	return schedules
 }
 
-// initializeGitHubClient creates a new GitHub Enterprise client with given token and base URL
-// Configures OAuth2 authentication and returns configured client
-// Exits program if client creation fails
-func initializeGitHubClient(token, baseURL string) *github.Client {
+// GitHubClientAdapter wraps the github.Client to implement GitHubClient interface
+type GitHubClientAdapter struct {
+	client *github.Client
+}
+
+// InitializeGitHubClient creates a new GitHub client with the given token and base URL
+func InitializeGitHubClient(token, baseURL string) GitHubClient {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	tc := oauth2.NewClient(ctx, ts)
@@ -249,5 +252,29 @@ func initializeGitHubClient(token, baseURL string) *github.Client {
 	if err != nil {
 		log.Fatalf("Failed to create GitHub client: %v", err)
 	}
-	return client
+	return &GitHubClientAdapter{client: client}
+}
+
+func (a *GitHubClientAdapter) ListByOrg(ctx context.Context, org string, opts *github.RepositoryListByOrgOptions) ([]*github.Repository, *github.Response, error) {
+	return a.client.Repositories.ListByOrg(ctx, org, opts)
+}
+
+func (a *GitHubClientAdapter) ListWorkflows(ctx context.Context, owner, repo string, opts *github.ListOptions) (*github.Workflows, *github.Response, error) {
+	return a.client.Actions.ListWorkflows(ctx, owner, repo, opts)
+}
+
+func (a *GitHubClientAdapter) GetWorkflow(ctx context.Context, owner, repo string, workflowID int64) (*github.Workflow, *github.Response, error) {
+	return a.client.Actions.GetWorkflowByID(ctx, owner, repo, workflowID)
+}
+
+func (a *GitHubClientAdapter) GetContents(ctx context.Context, owner, repo, path string, opts *github.RepositoryContentGetOptions) (*github.RepositoryContent, []*github.RepositoryContent, *github.Response, error) {
+	return a.client.Repositories.GetContents(ctx, owner, repo, path, opts)
+}
+
+func (a *GitHubClientAdapter) ListWorkflowRuns(ctx context.Context, owner, repo string, workflowID int64, opts *github.ListWorkflowRunsOptions) (*github.WorkflowRuns, *github.Response, error) {
+	return a.client.Actions.ListWorkflowRunsByID(ctx, owner, repo, workflowID, opts)
+}
+
+func (a *GitHubClientAdapter) ListCommits(ctx context.Context, owner, repo string, opts *github.CommitsListOptions) ([]*github.RepositoryCommit, *github.Response, error) {
+	return a.client.Repositories.ListCommits(ctx, owner, repo, opts)
 }

@@ -9,22 +9,27 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	os.Setenv("GITHUB_TOKEN", "test-token")
-	os.Setenv("GITHUB_BASE_URL", "https://api.github.com")
-	os.Setenv("GITHUB_ORGANIZATION", "test-org")
-	os.Setenv("SLACK_BOT_TOKEN", "test-slack-token")
-	os.Setenv("SLACK_CHANNEL_ID", "test-channel")
-	os.Setenv("SLACK_CANVAS_ID", "test-canvas")
-	os.Setenv("CONCURRENT_SCANS", "2")
+	// 환경 변수 설정
+	envVars := map[string]string{
+		"GITHUB_TOKEN":        "test-token",
+		"GITHUB_BASE_URL":     "https://api.github.com",
+		"GITHUB_ORGANIZATION": "test-org",
+		"SLACK_BOT_TOKEN":     "test-slack-token",
+		"SLACK_CHANNEL_ID":    "test-channel",
+		"SLACK_CANVAS_ID":     "test-canvas",
+		"CONCURRENT_SCANS":    "2",
+	}
 
+	// 환경 변수 설정
+	for k, v := range envVars {
+		os.Setenv(k, v)
+	}
+
+	// 테스트 후 환경 변수 정리
 	defer func() {
-		os.Unsetenv("GITHUB_TOKEN")
-		os.Unsetenv("GITHUB_BASE_URL")
-		os.Unsetenv("GITHUB_ORGANIZATION")
-		os.Unsetenv("SLACK_BOT_TOKEN")
-		os.Unsetenv("SLACK_CHANNEL_ID")
-		os.Unsetenv("SLACK_CANVAS_ID")
-		os.Unsetenv("CONCURRENT_SCANS")
+		for k := range envVars {
+			os.Unsetenv(k)
+		}
 	}()
 
 	err := run()
@@ -38,13 +43,13 @@ func TestInitializeScanner(t *testing.T) {
 		ConcurrentScans: 2,
 	}
 
-	scanner := initializeScanner(cfg)
-	assert.NotNil(t, scanner)
+	s := initializeScanner(cfg)
+	assert.NotNil(t, s)
 }
 
 func TestInitializeReporter(t *testing.T) {
-	reporter := initializeReporter()
-	assert.NotNil(t, reporter)
+	r := initializeReporter()
+	assert.NotNil(t, r)
 }
 
 func TestInitializeCanvasPublisher(t *testing.T) {
@@ -54,8 +59,8 @@ func TestInitializeCanvasPublisher(t *testing.T) {
 		SlackCanvasID:  "test-canvas",
 	}
 
-	publisher := initializeCanvasPublisher(cfg)
-	assert.NotNil(t, publisher)
+	p := initializeCanvasPublisher(cfg)
+	assert.NotNil(t, p)
 }
 
 func TestSetLogLevel(t *testing.T) {
