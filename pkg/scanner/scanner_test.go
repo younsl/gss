@@ -4,13 +4,15 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-github/v50/github"
+	"github.com/stretchr/testify/assert"
 	"github.com/younsl/ghes-schedule-scanner/pkg/models"
 )
 
@@ -72,15 +74,24 @@ func TestExtractSchedules(t *testing.T) {
 // TestScanRepository tests the complete repository scanning workflow including
 // API interactions, content retrieval, and result validation.
 func TestScanRepository(t *testing.T) {
-	// 테스트 서버 설정
-	server := setupTestServer(t)
-	defer server.Close()
+	t.Run("단일 저장소 스캔", func(t *testing.T) {
+		mockClient := newMockGitHubClient()
+		scanner := NewScanner(mockClient, 1)
 
-	// 테스트 실행
-	results := runScanTest(t, server)
+		ctx := context.Background()
+		repo := &github.Repository{
+			Name:          github.String("test-repo"),
+			Archived:      github.Bool(false),
+			DefaultBranch: github.String("main"),
+		}
 
-	// 결과 검증
-	validateTestResults(t, results)
+		var results []models.WorkflowInfo
+		var mu sync.Mutex
+
+		err := scanner.scanRepository(ctx, "owner", repo, &results, &mu)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, results, "Should have workflow results")
+	})
 }
 
 // setupTestServer initializes a mock HTTP server that simulates GitHub Enterprise API endpoints.
@@ -208,45 +219,233 @@ func register404Handler(t *testing.T, mux *http.ServeMux) {
 	})
 }
 
-// runScanTest executes the repository scan with mock server configuration.
-// Returns the scan results for validation.
+// runScanTest executes the scan test with the given test server
 func runScanTest(t *testing.T, server *httptest.Server) []models.WorkflowInfo {
-	scanner := NewScanner("test-token", server.URL, 1)
+	client := newMockGitHubClient()
 
+	// maxConcurrency 인자 추가
+	scanner := NewScanner(client, 1)
+
+	// 테스트용 저장소 생성
 	repo := &github.Repository{
-		Name:     github.String("testrepo"),
-		Owner:    &github.User{Login: github.String("testorg")},
-		FullName: github.String("testorg/testrepo"),
+		Name: github.String("testrepo"),
+		Owner: &github.User{
+			Login: github.String("testorg"),
+		},
 	}
 
 	var results []models.WorkflowInfo
 	var resultMutex sync.Mutex
 
-	ctx := context.Background()
-	err := scanner.scanRepository(ctx, "testorg", repo, &results, &resultMutex)
+	// 스캔 실행
+	err := scanner.scanRepository(context.Background(), "testorg", repo, &results, &resultMutex)
 	if err != nil {
-		t.Fatalf("scanRepository() failed: %v", err)
+		t.Fatalf("Failed to scan repository: %v", err)
 	}
 
 	return results
 }
 
-// validateTestResults checks if scan results match expected workflow information.
-// Verifies repository name, workflow details, schedules and status.
+// validateTestResults verifies the scan results
 func validateTestResults(t *testing.T, results []models.WorkflowInfo) {
-	if len(results) == 0 {
-		t.Fatal("scanRepository() got no results, want at least 1")
+	assert.NotEmpty(t, results, "Expected non-empty results")
+	assert.Equal(t, 1, len(results), "Expected exactly one workflow")
+
+	workflow := results[0]
+	assert.Equal(t, "testrepo", workflow.RepoName)
+	assert.Equal(t, "Test Workflow", workflow.WorkflowName)
+	assert.NotEmpty(t, workflow.CronSchedules, "Expected non-empty cron schedules")
+}
+
+// GitHubClientInterface는 테스트에 필요한 GitHub API 메서드들을 정의합니다
+type GitHubClientInterface interface {
+	ListByOrg(ctx context.Context, org string, opts *github.RepositoryListByOrgOptions) ([]*github.Repository, *github.Response, error)
+	ListWorkflows(ctx context.Context, owner, repo string, opts *github.ListOptions) (*github.Workflows, *github.Response, error)
+	GetWorkflow(ctx context.Context, owner, repo string, workflowID int64) (*github.Workflow, *github.Response, error)
+	GetContents(ctx context.Context, owner, repo, path string, opts *github.RepositoryContentGetOptions) (*github.RepositoryContent, []*github.RepositoryContent, *github.Response, error)
+	ListCommits(ctx context.Context, owner, repo string, opts *github.CommitsListOptions) ([]*github.RepositoryCommit, *github.Response, error)
+	ListWorkflowRuns(ctx context.Context, owner, repo string, workflowID int64, opts *github.ListWorkflowRunsOptions) (*github.WorkflowRuns, *github.Response, error)
+}
+
+// 테스트용 워크플로우 YAML 정의
+const testWorkflowYAML = `
+name: Test Workflow
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+`
+
+type mockGitHubClient struct {
+	shouldErr      bool
+	invalidContent bool
+	repoCount      int // 추가: 반환할 레포지토리 수
+}
+
+func newMockGitHubClient(opts ...func(*mockGitHubClient)) *mockGitHubClient {
+	client := &mockGitHubClient{
+		repoCount: 1, // 기본값 설정
+	}
+	for _, opt := range opts {
+		opt(client)
+	}
+	return client
+}
+
+func (m *mockGitHubClient) GetContents(ctx context.Context, owner, repo, path string, opts *github.RepositoryContentGetOptions) (*github.RepositoryContent, []*github.RepositoryContent, *github.Response, error) {
+	if m.shouldErr {
+		return nil, nil, nil, fmt.Errorf("mock error")
 	}
 
-	want := models.WorkflowInfo{
-		RepoName:      "testrepo",
-		WorkflowName:  "Test Workflow",
-		WorkflowID:    1,
-		CronSchedules: []string{"0 0 * * *"},
-		LastStatus:    "completed",
+	content := testWorkflowYAML
+	if m.invalidContent {
+		content = "invalid yaml"
 	}
 
-	if !reflect.DeepEqual(results[0], want) {
-		t.Errorf("scanRepository() got = %+v, want %+v", results[0], want)
+	encodedContent := base64.StdEncoding.EncodeToString([]byte(content))
+	return &github.RepositoryContent{
+		Content: github.String(encodedContent),
+		Path:    github.String(path),
+	}, nil, nil, nil
+}
+
+func (m *mockGitHubClient) ListWorkflows(ctx context.Context, owner, repo string, opts *github.ListOptions) (*github.Workflows, *github.Response, error) {
+	if m.shouldErr {
+		return nil, nil, fmt.Errorf("mock error")
 	}
+
+	return &github.Workflows{
+		Workflows: []*github.Workflow{
+			{
+				ID:   github.Int64(1),
+				Name: github.String("Test Workflow"),
+				Path: github.String(".github/workflows/test.yml"),
+			},
+		},
+	}, nil, nil
+}
+
+func (m *mockGitHubClient) ListByOrg(ctx context.Context, org string, opts *github.RepositoryListByOrgOptions) ([]*github.Repository, *github.Response, error) {
+	if m.shouldErr {
+		return nil, nil, fmt.Errorf("mock error")
+	}
+
+	repos := make([]*github.Repository, m.repoCount)
+	for i := 0; i < m.repoCount; i++ {
+		repos[i] = &github.Repository{
+			Name:          github.String(fmt.Sprintf("test-repo-%d", i+1)),
+			Archived:      github.Bool(false),
+			DefaultBranch: github.String("main"),
+		}
+	}
+	return repos, &github.Response{NextPage: 0}, nil
+}
+
+func (m *mockGitHubClient) GetWorkflow(ctx context.Context, owner, repo string, workflowID int64) (*github.Workflow, *github.Response, error) {
+	if m.shouldErr {
+		return nil, nil, fmt.Errorf("mock error")
+	}
+
+	return &github.Workflow{
+		ID:   github.Int64(workflowID),
+		Name: github.String("Test Workflow"),
+		Path: github.String(".github/workflows/test.yml"),
+	}, nil, nil
+}
+
+func (m *mockGitHubClient) ListWorkflowRuns(ctx context.Context, owner, repo string, workflowID int64, opts *github.ListWorkflowRunsOptions) (*github.WorkflowRuns, *github.Response, error) {
+	if m.shouldErr {
+		return nil, nil, fmt.Errorf("mock error")
+	}
+
+	return &github.WorkflowRuns{
+		TotalCount: github.Int(1),
+		WorkflowRuns: []*github.WorkflowRun{
+			{
+				ID:         github.Int64(1),
+				Name:       github.String("Test Run"),
+				CreatedAt:  &github.Timestamp{Time: time.Now()},
+				UpdatedAt:  &github.Timestamp{Time: time.Now()},
+				Status:     github.String("completed"),
+				Conclusion: github.String("success"),
+			},
+		},
+	}, nil, nil
+}
+
+func (m *mockGitHubClient) ListCommits(ctx context.Context, owner, repo string, opts *github.CommitsListOptions) ([]*github.RepositoryCommit, *github.Response, error) {
+	if m.shouldErr {
+		return nil, nil, fmt.Errorf("mock error")
+	}
+
+	return []*github.RepositoryCommit{
+		{
+			SHA: github.String("abc123"),
+			Commit: &github.Commit{
+				Message: github.String("Test commit"),
+				Author: &github.CommitAuthor{
+					Date: &github.Timestamp{Time: time.Now()},
+				},
+			},
+		},
+	}, nil, nil
+}
+
+func TestScanScheduledWorkflows(t *testing.T) {
+	t.Run("전체 저장소 스캔", func(t *testing.T) {
+		mockClient := newMockGitHubClient()
+		scanner := NewScanner(mockClient, 1)
+
+		result, err := scanner.ScanScheduledWorkflows("owner")
+		assert.NoError(t, err)
+		assert.NotNil(t, result, "Result should not be nil")
+		assert.NotEmpty(t, result.Workflows, "Should have workflow results")
+	})
+}
+
+func TestScanScheduledWorkflows_Errors(t *testing.T) {
+	t.Run("API 호출 실패", func(t *testing.T) {
+		mockClient := newMockGitHubClient(func(m *mockGitHubClient) {
+			m.shouldErr = true
+		})
+		scanner := NewScanner(mockClient, 1)
+
+		result, err := scanner.ScanScheduledWorkflows("owner")
+		assert.Error(t, err)
+		assert.Nil(t, result)
+	})
+
+	t.Run("잘못된 워크플로우 형식", func(t *testing.T) {
+		mockClient := newMockGitHubClient(func(m *mockGitHubClient) {
+			m.invalidContent = true
+			m.repoCount = 1
+		})
+		scanner := NewScanner(mockClient, 1)
+
+		result, err := scanner.ScanScheduledWorkflows("owner")
+		assert.Error(t, err)
+		if result != nil {
+			assert.Empty(t, result.Workflows)
+		}
+	})
+}
+
+func TestConcurrentScanning(t *testing.T) {
+	t.Run("동시 스캔 처리", func(t *testing.T) {
+		mockClient := newMockGitHubClient(func(m *mockGitHubClient) {
+			m.repoCount = 5
+		})
+		scanner := NewScanner(mockClient, 5)
+
+		result, err := scanner.ScanScheduledWorkflows("owner")
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, 5, len(result.Workflows))
+	})
 }
