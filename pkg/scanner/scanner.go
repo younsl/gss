@@ -8,21 +8,32 @@ import (
 	"sync/atomic"
 	"time"
 
+	"encoding/base64"
+
 	"github.com/google/go-github/v50/github"
 	"github.com/younsl/ghes-schedule-scanner/pkg/models"
 	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v3"
 )
 
-// Scanner handles GitHub Enterprise Server workflow scanning operations
+// GitHubClient는 GitHub API 호출에 필요한 메서드들을 정의합니다
+type GitHubClient interface {
+	ListByOrg(ctx context.Context, org string, opts *github.RepositoryListByOrgOptions) ([]*github.Repository, *github.Response, error)
+	ListWorkflows(ctx context.Context, owner, repo string, opts *github.ListOptions) (*github.Workflows, *github.Response, error)
+	GetWorkflow(ctx context.Context, owner, repo string, workflowID int64) (*github.Workflow, *github.Response, error)
+	GetContents(ctx context.Context, owner, repo, path string, opts *github.RepositoryContentGetOptions) (*github.RepositoryContent, []*github.RepositoryContent, *github.Response, error)
+	ListWorkflowRuns(ctx context.Context, owner, repo string, workflowID int64, opts *github.ListWorkflowRunsOptions) (*github.WorkflowRuns, *github.Response, error)
+	ListCommits(ctx context.Context, owner, repo string, opts *github.CommitsListOptions) ([]*github.RepositoryCommit, *github.Response, error)
+}
+
+// Scanner는 GitHub 워크플로우를 스캔하는 구조체입니다
 type Scanner struct {
-	client          *github.Client
+	client          GitHubClient // 인터페이스로 변경
 	concurrentScans int
 }
 
-// NewScanner creates a new Scanner instance with the given token, base URL and concurrent scan limit
-func NewScanner(token string, baseURL string, concurrentScans int) *Scanner {
-	client := initializeGitHubClient(token, baseURL)
+// NewScanner는 새로운 Scanner 인스턴스를 생성합니다
+func NewScanner(client GitHubClient, concurrentScans int) *Scanner {
 	return &Scanner{
 		client:          client,
 		concurrentScans: concurrentScans,
@@ -53,7 +64,7 @@ func (s *Scanner) ScanScheduledWorkflows(org string) (*models.ScanResult, error)
 
 	var allRepos []*github.Repository
 	for {
-		repos, resp, err := s.client.Repositories.ListByOrg(ctx, org, opts)
+		repos, resp, err := s.client.ListByOrg(ctx, org, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list repositories: %w", err)
 		}
@@ -99,7 +110,7 @@ func (s *Scanner) ScanScheduledWorkflows(org string) (*models.ScanResult, error)
 		len(allRepos), time.Since(start), maxRoutines)
 
 	if len(scanErrors) > 0 {
-		return nil, fmt.Errorf("encountered %d errors during scan", len(scanErrors))
+		return nil, fmt.Errorf("encountered %d errors during scan: %v", len(scanErrors), scanErrors)
 	}
 
 	return &models.ScanResult{
@@ -112,31 +123,42 @@ func (s *Scanner) ScanScheduledWorkflows(org string) (*models.ScanResult, error)
 // Extracts cron schedules and last run status for each workflow
 // Updates results slice through mutex for thread safety
 func (s *Scanner) scanRepository(ctx context.Context, org string, repo *github.Repository, results *[]models.WorkflowInfo, resultMutex *sync.Mutex) error {
-	workflows, _, err := s.client.Actions.ListWorkflows(ctx, org, repo.GetName(), nil)
+	workflows, _, err := s.client.ListWorkflows(ctx, org, repo.GetName(), nil)
 	if err != nil {
 		return fmt.Errorf("failed to list workflows for %s: %w", repo.GetName(), err)
 	}
 
 	for _, workflow := range workflows.Workflows {
-		fileContent, _, _, err := s.client.Repositories.GetContents(ctx, org, repo.GetName(), workflow.GetPath(), nil)
+		content, _, _, err := s.client.GetContents(ctx, org, repo.GetName(), workflow.GetPath(), nil)
 		if err != nil {
-			log.Printf("Failed to get contents for %s: %v", workflow.GetPath(), err)
-			continue
+			return fmt.Errorf("failed to get workflow content: %w", err)
 		}
 
-		content, err := fileContent.GetContent()
+		// GetContent()의 두 반환값을 모두 처리
+		contentStr, err := content.GetContent()
 		if err != nil {
-			log.Printf("Failed to decode content for %s: %v", workflow.GetPath(), err)
-			continue
+			return fmt.Errorf("failed to get content string: %w", err)
 		}
 
-		schedules, err := extractSchedulesWithValidation([]byte(content))
+		decodedContent, err := base64.StdEncoding.DecodeString(contentStr)
+		if err != nil {
+			return fmt.Errorf("failed to decode workflow content: %w", err)
+		}
+
+		// 워크플로우 콘텐츠 파싱
+		var workflowData map[string]interface{}
+		if err := yaml.Unmarshal([]byte(decodedContent), &workflowData); err != nil {
+			// YAML 파싱 에러를 상위로 전파
+			return fmt.Errorf("failed to parse workflow %s: %w", workflow.GetPath(), err)
+		}
+
+		schedules, err := extractSchedulesWithValidation(decodedContent)
 		if err != nil || len(schedules) == 0 {
 			log.Printf("No schedules found in %s: %v", workflow.GetPath(), err)
 			continue
 		}
 
-		runs, _, err := s.client.Actions.ListWorkflowRunsByID(ctx, org, repo.GetName(), workflow.GetID(), &github.ListWorkflowRunsOptions{
+		runs, _, err := s.client.ListWorkflowRuns(ctx, org, repo.GetName(), workflow.GetID(), &github.ListWorkflowRunsOptions{
 			ListOptions: github.ListOptions{PerPage: 1},
 		})
 		if err != nil {
@@ -144,12 +166,11 @@ func (s *Scanner) scanRepository(ctx context.Context, org string, repo *github.R
 		}
 
 		lastStatus := "Unknown"
-		if len(runs.WorkflowRuns) > 0 {
+		if runs != nil && len(runs.WorkflowRuns) > 0 {
 			lastStatus = runs.WorkflowRuns[0].GetStatus()
 		}
 
-		// 워크플로우 파일의 마지막 커밋 정보 가져오기
-		commits, _, err := s.client.Repositories.ListCommits(ctx, org, repo.GetName(), &github.CommitsListOptions{
+		commits, _, err := s.client.ListCommits(ctx, org, repo.GetName(), &github.CommitsListOptions{
 			Path:        workflow.GetPath(),
 			ListOptions: github.ListOptions{PerPage: 1},
 		})
@@ -164,7 +185,6 @@ func (s *Scanner) scanRepository(ctx context.Context, org string, repo *github.R
 			if author := commit.GetAuthor(); author != nil {
 				lastCommitter = author.GetLogin()
 			}
-			// fallback: committer가 없는 경우 commit.author.name 사용
 			if lastCommitter == "" && commit.Commit != nil && commit.Commit.Author != nil {
 				lastCommitter = commit.Commit.Author.GetName()
 			}
@@ -217,10 +237,13 @@ func extractSchedules(workflow map[string]interface{}) []string {
 	return schedules
 }
 
-// initializeGitHubClient creates a new GitHub Enterprise client with given token and base URL
-// Configures OAuth2 authentication and returns configured client
-// Exits program if client creation fails
-func initializeGitHubClient(token, baseURL string) *github.Client {
+// GitHubClientAdapter wraps the github.Client to implement GitHubClient interface
+type GitHubClientAdapter struct {
+	client *github.Client
+}
+
+// InitializeGitHubClient creates a new GitHub client with the given token and base URL
+func InitializeGitHubClient(token, baseURL string) GitHubClient {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	tc := oauth2.NewClient(ctx, ts)
@@ -229,5 +252,29 @@ func initializeGitHubClient(token, baseURL string) *github.Client {
 	if err != nil {
 		log.Fatalf("Failed to create GitHub client: %v", err)
 	}
-	return client
+	return &GitHubClientAdapter{client: client}
+}
+
+func (a *GitHubClientAdapter) ListByOrg(ctx context.Context, org string, opts *github.RepositoryListByOrgOptions) ([]*github.Repository, *github.Response, error) {
+	return a.client.Repositories.ListByOrg(ctx, org, opts)
+}
+
+func (a *GitHubClientAdapter) ListWorkflows(ctx context.Context, owner, repo string, opts *github.ListOptions) (*github.Workflows, *github.Response, error) {
+	return a.client.Actions.ListWorkflows(ctx, owner, repo, opts)
+}
+
+func (a *GitHubClientAdapter) GetWorkflow(ctx context.Context, owner, repo string, workflowID int64) (*github.Workflow, *github.Response, error) {
+	return a.client.Actions.GetWorkflowByID(ctx, owner, repo, workflowID)
+}
+
+func (a *GitHubClientAdapter) GetContents(ctx context.Context, owner, repo, path string, opts *github.RepositoryContentGetOptions) (*github.RepositoryContent, []*github.RepositoryContent, *github.Response, error) {
+	return a.client.Repositories.GetContents(ctx, owner, repo, path, opts)
+}
+
+func (a *GitHubClientAdapter) ListWorkflowRuns(ctx context.Context, owner, repo string, workflowID int64, opts *github.ListWorkflowRunsOptions) (*github.WorkflowRuns, *github.Response, error) {
+	return a.client.Actions.ListWorkflowRunsByID(ctx, owner, repo, workflowID, opts)
+}
+
+func (a *GitHubClientAdapter) ListCommits(ctx context.Context, owner, repo string, opts *github.CommitsListOptions) ([]*github.RepositoryCommit, *github.Response, error) {
+	return a.client.Repositories.ListCommits(ctx, owner, repo, opts)
 }

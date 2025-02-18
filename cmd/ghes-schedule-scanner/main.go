@@ -31,6 +31,7 @@ func run() error {
 	}
 
 	scanner := initializeScanner(cfg)
+	log.Printf("GitHub Base URL: %s", cfg.GitHubBaseURL)
 
 	// Scan workflows
 	result, err := scanner.ScanScheduledWorkflows(cfg.GitHubOrganization)
@@ -38,12 +39,7 @@ func run() error {
 		return fmt.Errorf("workflow scan failed: %w", err)
 	}
 
-	// Create canvas publisher
-	publisher := canvas.NewCanvasPublisher(
-		cfg.SlackBotToken,
-		cfg.SlackChannelID,
-		cfg.SlackCanvasID,
-	)
+	publisher := initializeCanvasPublisher(cfg)
 
 	// Publish results to Slack Canvas
 	if err := publisher.PublishScanResult(result); err != nil {
@@ -54,9 +50,8 @@ func run() error {
 }
 
 func initializeScanner(cfg *config.Config) *scanner.Scanner {
-	scanner := scanner.NewScanner(cfg.GitHubToken, cfg.GitHubBaseURL, cfg.ConcurrentScans)
-	log.Printf("GitHub Base URL: %s", cfg.GitHubBaseURL)
-	return scanner
+	client := scanner.InitializeGitHubClient(cfg.GitHubToken, cfg.GitHubBaseURL)
+	return scanner.NewScanner(client, cfg.ConcurrentScans)
 }
 
 func initializeReporter() *reporter.Reporter {
