@@ -18,4 +18,4 @@ GHES Schedule Scanner runs as a kubernetes cronJob that periodically scans GitHu
 ## Documentation
 
 - [Installation](./docs/installation.md)
-- [Roadmap](./docs/public-roadmap.md)
+- [Roadmap](./docs/roadmap.md)
