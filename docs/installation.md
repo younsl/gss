@@ -36,6 +36,8 @@ kubectl create secret generic ghes-schedule-scanner-secret \
 
 GSS pod uses Slack Bot Token to create a canvas page in Slack channel. Slack Bot Token can be created from [Slack API](https://api.slack.com/apps).
 
+![Canvases API architecture](./assets/images/2.png)
+
 - **Slack Bot Token**: Not slack app token, only slack bot token is supported. Slack bot token starts with `xoxb-`.
 - **Slack Channel ID**: Channel ID where the canvas will be created. Channel ID is a string of numbers starting with `C`.
 - **Slack Canvas ID**: Canvas ID to update. Canvas ID is a string of numbers starting with `F`.
