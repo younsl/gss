@@ -13,9 +13,9 @@ spec:
   timeZone: {{ .Values.timeZone | default "Etc/UTC" }}
   successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit }}
   failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit }}
-  ttlSecondsAfterFinished: {{ .Values.ttlSecondsAfterFinished }}
   jobTemplate:
     spec:
+      ttlSecondsAfterFinished: {{ .Values.ttlSecondsAfterFinished }}
       template:
         metadata:
           {{- with .Values.podAnnotations }}

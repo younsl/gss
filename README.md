@@ -8,11 +8,11 @@ GHES Schedule Scanner runs as a kubernetes cronJob that periodically scans GitHu
 
 ## Features
 
-- Compatible with self-hosted GitHub Enterprise Server (3.11+)
+- Compatible with self-hosted [GitHub Enterprise Server (3.11+)](https://docs.github.com/ko/enterprise-server/admin/all-releases)
 - Scan scheduled workflows across all repositories in an organization
 - UTC/KST timezone conversion support
 - Workflow execution status monitoring
-- Parallel scanning support
+- Parallel scanning support using [Goroutines](https://go.dev/tour/concurrency/1)
 - High performance repository scanning (scans 900+ repositories in about 20-22 seconds)
 
 ## Documentation
