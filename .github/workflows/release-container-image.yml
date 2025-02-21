@@ -19,11 +19,12 @@ jobs:
     outputs:
       image_exists: ${{ steps.image_check.outputs.image_exists }}
     steps:
-      - name: Set version
-        id: version
+      - name: Set image tag
+        id: tag
         run: |
-          echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
-          echo "Container image version is $VERSION"
+          echo "IMAGE_TAG=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "Container image version is $IMAGE_TAG"
 
       - name: Check if image exists on GitHub Container Registry
         id: image_check
@@ -37,11 +38,11 @@ jobs:
             echo "No tags found, treating as image not existing."
             echo "image_exists=false" >> $GITHUB_OUTPUT
           else
-            if echo "$TAGS" | grep -q "\"${{ env.VERSION }}\""; then
-              echo "Image with tag ${{ env.VERSION }} already exists."
+            if echo "$TAGS" | grep -q "\"${{ env.IMAGE_TAG }}\""; then
+              echo "Image with tag ${{ env.IMAGE_TAG }} already exists."
               echo "image_exists=true" >> $GITHUB_OUTPUT
             else
-              echo "Image with tag ${{ env.VERSION }} not found."
+              echo "Image with tag ${{ env.IMAGE_TAG }} not found."
               echo "image_exists=false" >> $GITHUB_OUTPUT
             fi
           fi
@@ -50,6 +51,8 @@ jobs:
     needs: check
     if: ${{ needs.check.outputs.image_exists == 'false' }}
     runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: ${{ needs.check.outputs.image_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,4 +76,4 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+          tags: ghcr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
