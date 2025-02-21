@@ -1,5 +1,5 @@
 name: Release GSS image
-run-name: 📦 [younsl/gss] Release GSS image (amd64, arm64)
+run-name: 📦 [younsl/gss] Release GSS image to ghcr.io
 
 on:
   push:
@@ -23,9 +23,10 @@ jobs:
       - name: Set image tag
         id: tag
         run: |
-          echo "IMAGE_TAG=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
-          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
-          echo "Container image version is $IMAGE_TAG"
+          IMAGE_TAG=${GITHUB_REF_NAME#v}
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "Container image version is pinned to ${IMAGE_TAG} without v prefix."
 
       - name: Check if image exists on GitHub Container Registry
         id: image_check
