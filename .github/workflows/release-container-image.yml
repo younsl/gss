@@ -8,7 +8,6 @@ on:
 
 env:
   IMAGE_NAME: younsl/gss
-  VERSION: ${{ replace(github.ref_name, 'v', '') }}
 
 permissions:
   contents: read
@@ -20,6 +19,12 @@ jobs:
     outputs:
       image_exists: ${{ steps.image_check.outputs.image_exists }}
     steps:
+      - name: Set version
+        id: version
+        run: |
+          echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+          echo "Container image version is $VERSION"
+
       - name: Check if image exists on GitHub Container Registry
         id: image_check
         run: |
