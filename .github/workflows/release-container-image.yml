@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image_exists: ${{ steps.image_check.outputs.image_exists }}
+      image_tag: ${{ steps.tag.outputs.image_tag }}
     steps:
       - name: Set image tag
         id: tag
