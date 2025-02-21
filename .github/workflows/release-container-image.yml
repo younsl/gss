@@ -1,0 +1,86 @@
+name: Release GSS image
+run-name: 📦 [younsl/gss] Release GSS image to ghcr.io
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  IMAGE_NAME: younsl/gss
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      image_exists: ${{ steps.image_check.outputs.image_exists }}
+      image_tag: ${{ steps.tag.outputs.image_tag }}
+    steps:
+      - name: Set image tag
+        id: tag
+        run: |
+          IMAGE_TAG=${GITHUB_REF_NAME#v}
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "Container image version is pinned to ${IMAGE_TAG} without v prefix."
+
+      - name: Check if image exists on GitHub Container Registry
+        id: image_check
+        run: |
+          ENCODED_TOKEN=$(echo -n "${{ secrets.GITHUB_TOKEN }}" | base64)
+          TAGS=$(curl -s -H "Authorization: Bearer ${ENCODED_TOKEN}" \
+            https://ghcr.io/v2/${{ env.IMAGE_NAME }}/tags/list)
+          echo "TAGS: $TAGS"
+
+          if [[ -z "$TAGS" || "$TAGS" == "null" ]]; then
+            echo "No tags found, treating as image not existing."
+            echo "image_exists=false" >> $GITHUB_OUTPUT
+          else
+            if echo "$TAGS" | grep -q "\"${{ env.IMAGE_TAG }}\""; then
+              echo "Image with tag ${{ env.IMAGE_TAG }} already exists."
+              echo "image_exists=true" >> $GITHUB_OUTPUT
+            else
+              echo "Image with tag ${{ env.IMAGE_TAG }} not found."
+              echo "image_exists=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  release:
+    needs: check
+    if: ${{ needs.check.outputs.image_exists == 'false' }}
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: ${{ needs.check.outputs.image_tag }}
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        id: qemu
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        id: docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        id: login
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: younsl
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
