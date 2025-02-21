@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"log"
 
+	"github.com/sirupsen/logrus"
 	"github.com/younsl/ghes-schedule-scanner/internal/config"
 	"github.com/younsl/ghes-schedule-scanner/pkg/canvas"
 	"github.com/younsl/ghes-schedule-scanner/pkg/reporter"
@@ -18,24 +18,31 @@ type app struct {
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
-	log.Println("Workflow scan completed successfully")
+	logrus.Info("Workflow scan completed successfully")
 }
 
 func run() error {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Printf("Config values: %+v", cfg)
+		logrus.WithFields(logrus.Fields{
+			"config": fmt.Sprintf("%+v", cfg),
+			"error":  err,
+		}).Error("Failed to load config")
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
+	// Initialize logging level from config
+	setLogLevel(cfg.LogLevel)
+
 	scanner := initializeScanner(cfg)
-	log.Printf("GitHub Base URL: %s", cfg.GitHubBaseURL)
+	logrus.WithField("baseURL", cfg.GitHubBaseURL).Info("GitHub Base URL configured")
 
 	// Scan workflows
 	result, err := scanner.ScanScheduledWorkflows(cfg.GitHubOrganization)
 	if err != nil {
+		logrus.WithError(err).Error("Workflow scan failed")
 		return fmt.Errorf("workflow scan failed: %w", err)
 	}
 
@@ -43,6 +50,7 @@ func run() error {
 
 	// Publish results to Slack Canvas
 	if err := publisher.PublishScanResult(result); err != nil {
+		logrus.WithError(err).Error("Failed to publish to canvas")
 		return fmt.Errorf("failed to publish to canvas: %w", err)
 	}
 
@@ -64,16 +72,28 @@ func initializeCanvasPublisher(cfg *config.Config) *canvas.CanvasPublisher {
 		cfg.SlackBotToken,
 		cfg.SlackChannelID,
 		cfg.SlackCanvasID,
+		cfg.GitHubOrganization,
+		cfg.GitHubBaseURL,
 	)
 }
 
 func setLogLevel(level string) {
 	switch level {
 	case "DEBUG":
-		log.SetFlags(log.LstdFlags | log.Lshortfile)
+		logrus.SetLevel(logrus.DebugLevel)
+		logrus.SetReportCaller(true)
 	case "INFO":
-		log.SetFlags(log.LstdFlags)
+		logrus.SetLevel(logrus.InfoLevel)
+	case "WARN":
+		logrus.SetLevel(logrus.WarnLevel)
+	case "ERROR":
+		logrus.SetLevel(logrus.ErrorLevel)
 	default:
-		log.SetFlags(0)
+		logrus.SetLevel(logrus.InfoLevel)
 	}
+
+	// Set JSON formatter
+	logrus.SetFormatter(&logrus.JSONFormatter{
+		TimestampFormat: "2006-01-02T15:04:05.999Z07:00",
+	})
 }

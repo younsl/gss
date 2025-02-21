@@ -9,30 +9,38 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"github.com/younsl/ghes-schedule-scanner/pkg/models"
 )
 
 type CanvasPublisher struct {
-	client    *slack.Client
-	channelID string
-	apiToken  string
-	baseURL   string
-	canvasID  string
+	client        *slack.Client
+	channelID     string
+	apiToken      string
+	baseURL       string
+	canvasID      string
+	organization  string
+	githubBaseURL string
 }
 
-func NewCanvasPublisher(token, channelID, canvasID string) *CanvasPublisher {
+func NewCanvasPublisher(token, channelID, canvasID, organization, githubBaseURL string) *CanvasPublisher {
 	return &CanvasPublisher{
-		client:    slack.New(token),
-		channelID: channelID,
-		apiToken:  token,
-		baseURL:   "https://slack.com/api",
-		canvasID:  canvasID,
+		client:        slack.New(token),
+		channelID:     channelID,
+		apiToken:      token,
+		baseURL:       "https://slack.com/api",
+		canvasID:      canvasID,
+		organization:  organization,
+		githubBaseURL: githubBaseURL,
 	}
 }
 
 func (c *CanvasPublisher) PublishScanResult(result *models.ScanResult) error {
-	fmt.Printf("Starting Canvas publication process for %d workflows (Canvas ID: %s)\n", len(result.Workflows), c.canvasID)
+	logrus.WithFields(logrus.Fields{
+		"workflowCount": len(result.Workflows),
+		"canvasID":      c.canvasID,
+	}).Info("Starting Canvas publication process")
 
 	if c.apiToken == "" {
 		return fmt.Errorf("invalid configuration: missing Slack API token")
@@ -47,22 +55,28 @@ func (c *CanvasPublisher) PublishScanResult(result *models.ScanResult) error {
 		return fmt.Errorf("invalid configuration: missing Canvas ID")
 	}
 
-	fmt.Printf("Preparing Canvas blocks for Canvas ID: %s...\n", c.canvasID)
+	logrus.WithField("canvasID", c.canvasID).Debug("Preparing Canvas blocks")
 	blocks := c.createCanvasBlocks(result)
-	fmt.Printf("Generated %d blocks for Canvas ID: %s\n", len(blocks), c.canvasID)
+	logrus.WithFields(logrus.Fields{
+		"blockCount": len(blocks),
+		"canvasID":   c.canvasID,
+	}).Debug("Generated Canvas blocks")
 
-	fmt.Printf("Updating Canvas (ID: %s) with content...\n", c.canvasID)
-	err := c.updateCanvas(blocks)
-	if err != nil {
+	logrus.WithField("canvasID", c.canvasID).Info("Updating Canvas with content")
+	if err := c.updateCanvas(blocks); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error":    err,
+			"canvasID": c.canvasID,
+		}).Error("Failed to update canvas")
 		return fmt.Errorf("failed to update canvas (ID: %s): %w", c.canvasID, err)
 	}
-	fmt.Printf("Successfully updated Canvas content (ID: %s)\n", c.canvasID)
 
+	logrus.WithField("canvasID", c.canvasID).Info("Successfully updated Canvas content")
 	return nil
 }
 
 func (c *CanvasPublisher) setCanvasAccess(canvasID string) error {
-	fmt.Printf("Setting Canvas access for canvas ID: %s\n", canvasID)
+	logrus.WithField("canvasID", canvasID).Debug("Setting Canvas access")
 	url := fmt.Sprintf("%s/canvases.access.set", strings.TrimRight(c.baseURL, "/"))
 
 	payload := map[string]interface{}{
@@ -81,7 +95,7 @@ func (c *CanvasPublisher) setCanvasAccess(canvasID string) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{Timeout: 30 * time.Second}
-	fmt.Printf("Sending request to set access for channel: %s with write permission\n", c.channelID)
+	logrus.WithField("channelID", c.channelID).Info("Sending request to set access for channel with write permission")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -94,7 +108,7 @@ func (c *CanvasPublisher) setCanvasAccess(canvasID string) error {
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	fmt.Printf("Canvas access set API response: %s\n", string(body))
+	logrus.WithField("response", string(body)).Info("Canvas access set API response")
 
 	var result struct {
 		Ok    bool   `json:"ok"`
@@ -109,7 +123,7 @@ func (c *CanvasPublisher) setCanvasAccess(canvasID string) error {
 		return fmt.Errorf("failed to set canvas access: %s", result.Error)
 	}
 
-	fmt.Printf("Successfully set Canvas access for channel: %s\n", c.channelID)
+	logrus.WithField("channelID", c.channelID).Info("Successfully set Canvas access for channel")
 	return nil
 }
 
@@ -117,7 +131,7 @@ func (c *CanvasPublisher) setCanvasAccess(canvasID string) error {
 func (c *CanvasPublisher) updateCanvas(blocks []slack.Block) error {
 	markdown := convertBlocksToMarkdown(blocks)
 
-	fmt.Printf("Generated Markdown Content for Canvas ID %s:\n%s\n", c.canvasID, markdown)
+	logrus.WithField("markdown", markdown).Debug("Generated Markdown Content for Canvas")
 
 	url := fmt.Sprintf("%s/canvases.edit", strings.TrimRight(c.baseURL, "/"))
 
@@ -137,7 +151,7 @@ func (c *CanvasPublisher) updateCanvas(blocks []slack.Block) error {
 	}
 
 	payloadBytes, _ := json.MarshalIndent(payload, "", "  ")
-	fmt.Printf("Update Canvas Payload for Canvas ID %s:\n%s\n", c.canvasID, string(payloadBytes))
+	logrus.WithField("payload", string(payloadBytes)).Debug("Update Canvas Payload")
 
 	req, err := http.NewRequest("POST", url, jsonBody(payload))
 	if err != nil {
@@ -154,7 +168,7 @@ func (c *CanvasPublisher) updateCanvas(blocks []slack.Block) error {
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("Response Headers for Canvas ID %s: %v\n", c.canvasID, resp.Header)
+	logrus.WithField("responseHeaders", resp.Header).Debug("Response Headers for Canvas")
 
 	var result struct {
 		Ok    bool   `json:"ok"`
@@ -162,7 +176,7 @@ func (c *CanvasPublisher) updateCanvas(blocks []slack.Block) error {
 	}
 
 	body, _ := io.ReadAll(resp.Body)
-	fmt.Printf("Canvas update API response for Canvas ID %s: %s\n", c.canvasID, string(body))
+	logrus.WithField("response", string(body)).Debug("Canvas update API response")
 	if err := json.Unmarshal(body, &result); err != nil {
 		return fmt.Errorf("failed to decode response: %w, body: %s", err, string(body))
 	}
@@ -264,10 +278,34 @@ func (c *CanvasPublisher) createWorkflowRow(wf models.WorkflowInfo, index int) s
 		"Unknown":   "❓",
 	}
 
+	// Last Committer 포맷
+	committerStatus := ""
+	if wf.LastCommitter == "Unknown" {
+		committerStatus = "Unknown"
+	} else if wf.IsActiveUser {
+		committerStatus = fmt.Sprintf("%s (Active)", wf.LastCommitter)
+	} else {
+		committerStatus = fmt.Sprintf("%s (Inactive)", wf.LastCommitter)
+	}
+
+	// 워크플로우 파일 경로에서 실제 파일명만 추출
+	workflowFileName := wf.WorkflowFileName
+	if strings.HasPrefix(workflowFileName, ".github/workflows/") {
+		workflowFileName = strings.TrimPrefix(workflowFileName, ".github/workflows/")
+	}
+
+	// GitHub Enterprise Server URL 생성
+	baseURL := strings.TrimSuffix(c.githubBaseURL, "/api/v3")
+	workflowURL := fmt.Sprintf("%s/%s/%s/actions/workflows/%s",
+		baseURL,
+		c.organization,
+		wf.RepoName,
+		workflowFileName)
+
 	return slack.NewSectionBlock(
 		slack.NewTextBlockObject("mrkdwn",
 			fmt.Sprintf("* **[%d]** **%s**\n"+
-				"  * Workflow: `%s`\n"+
+				"  * Workflow: `%s` <%s|🔗>\n"+
 				"  * UTC Schedule: `%s`\n"+
 				"  * KST Schedule: `%s`\n"+
 				"  * Last Status: %s `%s`\n"+
@@ -275,11 +313,12 @@ func (c *CanvasPublisher) createWorkflowRow(wf models.WorkflowInfo, index int) s
 				index,
 				wf.RepoName,
 				wf.WorkflowName,
+				workflowURL,
 				schedules,
 				convertToKST(schedules),
 				statusEmoji[wf.LastStatus],
 				wf.LastStatus,
-				wf.LastCommitter,
+				committerStatus,
 			),
 			false, false,
 		),
