@@ -1,0 +1,71 @@
+name: Release GSS image
+run-name: 📦 [younsl/gss] Release GSS image (amd64, arm64)
+
+on:
+  push:
+    tags:
+      - 'release/*'
+
+env:
+  IMAGE_NAME: younsl/gss
+  VERSION: ${{ replace(github.ref_name, 'release/', '') }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      image_exists: ${{ steps.image_check.outputs.image_exists }}
+    steps:
+      - name: Check if image exists on GitHub Container Registry
+        id: image_check
+        run: |
+          ENCODED_TOKEN=$(echo -n "${{ secrets.GITHUB_TOKEN }}" | base64)
+          TAGS=$(curl -s -H "Authorization: Bearer ${ENCODED_TOKEN}" \
+            https://ghcr.io/v2/${{ env.IMAGE_NAME }}/tags/list)
+          echo "TAGS: $TAGS"
+
+          if [[ -z "$TAGS" || "$TAGS" == "null" ]]; then
+            echo "No tags found, treating as image not existing."
+            echo "image_exists=false" >> $GITHUB_OUTPUT
+          else
+            if echo "$TAGS" | grep -q "\"${{ env.VERSION }}\""; then
+              echo "Image with tag ${{ env.VERSION }} already exists."
+              echo "image_exists=true" >> $GITHUB_OUTPUT
+            else
+              echo "Image with tag ${{ env.VERSION }} not found."
+              echo "image_exists=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  release:
+    needs: check
+    if: ${{ needs.check.outputs.image_exists == 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: younsl
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
