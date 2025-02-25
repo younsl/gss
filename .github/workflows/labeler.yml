@@ -12,15 +12,10 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        id: checkout
-
       - name: Attach labels
         uses: actions/labeler@v5
         id: label
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          configuration-path: .github/labeler.yml
           sync-labels: true
           dot: true
