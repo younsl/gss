@@ -11,6 +11,66 @@ GHES Schedule Scanner supports only Helm installation. Other deployment methods 
 - Personal Access Token issued by GHES Organization Owner or Enterprise Admin (with `repo:*` scope to access all repositories)
 - Kubernetes cluster to deploy GHES Schedule Scanner by using Helm chart
 
+## Local Development Setup
+
+For local development and testing, you'll need to set up the following environment variables:
+
+```bash
+# Required environment variables
+export GITHUB_TOKEN="ghp_token"              # GitHub Personal Access Token with repo:* scope
+export GITHUB_ORGANIZATION="your_org"        # Your GitHub organization name
+export GITHUB_BASE_URL="https://your-ghes-domain"  # Your GitHub Enterprise Server URL
+
+# Optional environment variables
+export LOG_LEVEL="INFO"                      # Log level (default: INFO)
+export REQUEST_TIMEOUT="30"                  # Request timeout in seconds (default: 30)
+
+# Optional Slack integration
+export SLACK_BOT_TOKEN="xoxb-token"         # Slack Bot Token
+export SLACK_CHANNEL_ID="F01234ABCD"        # Slack Channel ID
+export SLACK_CANVAS_ID="C01234ABCD"         # Slack Canvas ID
+```
+
+To run the scanner locally:
+
+```bash
+# Run with default log level
+go run cmd/ghes-schedule-scanner/main.go
+
+# Run with specific log level
+LOG_LEVEL=DEBUG go run cmd/ghes-schedule-scanner/main.go
+```
+
+## Environment Variables and ConfigMap
+
+The following table shows the mapping between environment variables and configMap values:
+
+| Environment Variable   | ConfigMap Key       | Description                                    | Required |
+|-----------------------|---------------------|------------------------------------------------|----------|
+| GITHUB_TOKEN          | GITHUB_TOKEN        | GitHub PAT with repo:* scope                   | Yes      |
+| GITHUB_ORGANIZATION   | GITHUB_ORGANIZATION | GitHub organization name                        | Yes      |
+| GITHUB_BASE_URL      | GITHUB_BASE_URL     | GitHub Enterprise Server URL                    | Yes      |
+| LOG_LEVEL            | LOG_LEVEL           | Log level (DEBUG, INFO, WARN, ERROR)           | No       |
+| REQUEST_TIMEOUT      | REQUEST_TIMEOUT     | API request timeout in seconds                 | No       |
+| SLACK_BOT_TOKEN      | SLACK_BOT_TOKEN     | Slack Bot Token (xoxb-)                        | No       |
+| SLACK_CHANNEL_ID     | SLACK_CHANNEL_ID    | Slack Channel ID                               | No       |
+| SLACK_CANVAS_ID      | SLACK_CANVAS_ID     | Slack Canvas ID                                | No       |
+
+Example configMap in values.yaml:
+
+```yaml
+# hack/charts/ghes-schedule-scanner/values.yaml
+configMap:
+  data:
+    GITHUB_ORGANIZATION: "your-org"
+    GITHUB_BASE_URL: "https://your-ghes-domain"
+    LOG_LEVEL: "INFO"
+    REQUEST_TIMEOUT: "30"
+    SLACK_BOT_TOKEN: "xoxb-your-token"
+    SLACK_CHANNEL_ID: "F01234ABCD"
+    SLACK_CANVAS_ID: "C01234ABCD"
+```
+
 ## Helm installation
 
 1. Create kubernetes secret
