@@ -1,5 +1,5 @@
 name: Labeler
-run-name: 🔖 [younsl/gss] Label pull request #${{ github.event.pull_request.number }} from ${{ github.head_ref }}
+run-name: "🔖 [younsl/gss] Label pull request #${{ github.event.pull_request.number }} from ${{ github.head_ref }}"
 
 on:
   pull_request:
