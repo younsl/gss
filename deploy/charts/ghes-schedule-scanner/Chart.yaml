@@ -2,8 +2,8 @@ apiVersion: v2
 name: ghes-schedule-scanner
 description: A Helm chart for deploying the GHES Schedule Scanner
 type: application
-version: 0.2.1
-appVersion: "0.2.1"
+version: 0.3.0
+appVersion: "0.3.0"
 
 keywords:
   - github
@@ -20,7 +20,9 @@ maintainers:
   - name: younsl
     email: cysl@kakao.com
     url: https://github.com/younsl
-
+  - name: ddukbg
+    email: wowrebong@gmail.com
+    url: https://github.com/ddukbg
 dependencies: []
 
 annotations:
