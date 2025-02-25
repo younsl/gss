@@ -1,0 +1,112 @@
+# Core (core/)
+'core/pkg':
+  - 'pkg/**/*'
+
+'core/internal':
+  - 'internal/**/*'
+
+'core/cmd':
+  - 'cmd/**/*'
+
+# API (api/)
+'api/rest':
+  - 'api/rest/**/*'
+  - 'internal/api/rest/**/*'
+  - 'pkg/api/rest/**/*'
+
+'api/grpc':
+  - 'api/grpc/**/*'
+  - 'internal/api/grpc/**/*'
+  - 'pkg/api/grpc/**/*'
+
+'api/proto':
+  - 'api/proto/**/*'
+  - 'proto/**/*'
+  - '**/*.proto'
+
+# Data and models (pkg/models/, internal/models/)
+'data/models':
+  - 'internal/models/**/*'
+  - 'pkg/models/**/*'
+
+'data/database':
+  - 'internal/database/**/*'
+  - 'pkg/database/**/*'
+  - 'migrations/**/*'
+  - '**/*.sql'
+
+'data/cache':
+  - 'internal/cache/**/*'
+  - 'pkg/cache/**/*'
+
+# Infrastructure (deploy/chart/)
+'infra/helm':
+  - 'deploy/chart/**/*'
+
+# Test
+'test/unit':
+  - '**/*_test.go'
+
+'test/integration':
+  - 'test/integration/**/*'
+  - 'tests/integration/**/*'
+
+'test/e2e':
+  - 'test/e2e/**/*'
+  - 'tests/e2e/**/*'
+
+# Configs
+'config/app':
+  - 'configs/**/*'
+  - 'config/**/*'
+  - '**/*.yaml'
+  - '**/*.yml'
+  - '**/*.toml'
+  - '**/*.json'
+  - '.env*'
+
+'config/build':
+  - 'go.mod'
+  - 'go.sum'
+  - 'Makefile'
+  - 'Dockerfile'
+  - 'docker-compose.yml'
+  - '.dockerignore'
+
+# Documentations (docs/)
+'docs/api':
+  - 'api/swagger/**/*'
+  - 'docs/api/**/*'
+  - '**/*.swagger.json'
+  - '**/*.swagger.yaml'
+
+'docs/guide':
+  - 'docs/**/*'
+  - '**/*.md'
+  - 'README.md'
+
+# Utilities (util/)
+'util/tools':
+  - 'tools/**/*'
+  - 'scripts/**/*'
+
+'util/vendor':
+  - 'vendor/**/*'
+
+# Security (security/)
+'security/auth':
+  - 'internal/auth/**/*'
+  - 'pkg/auth/**/*'
+
+'security/fix':
+  - 'internal/security/**/*'
+  - 'pkg/security/**/*'
+
+# Miscellaneous (go.mod, go.sum, etc.)
+'chore/dependencies':
+  - 'go.mod'
+  - 'go.sum'
+
+'chore/refactor':
+  - any: ['**/*.go']
+    all: ['!**/*_test.go', '!docs/**/*', '!*.md'] 
