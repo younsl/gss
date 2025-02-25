@@ -35,6 +35,15 @@ type Config struct {
 
 	// ConcurrentScans is the maximum number of concurrent repository scans
 	ConcurrentScans int
+
+	// ConnectivityMaxRetries is the maximum number of retry attempts for connectivity check
+	ConnectivityMaxRetries int
+
+	// ConnectivityRetryInterval is the duration to wait between retries in seconds for connectivity check
+	ConnectivityRetryInterval int
+
+	// ConnectivityTimeout is the timeout for each connection attempt in seconds for connectivity check
+	ConnectivityTimeout int
 }
 
 func LoadConfig() (*Config, error) {
@@ -67,6 +76,11 @@ func LoadConfig() (*Config, error) {
 	cfg.LogLevel = getEnvWithDefault("LOG_LEVEL", "INFO")
 	cfg.RequestTimeout = getIntEnvWithDefault("REQUEST_TIMEOUT", 30)
 	cfg.ConcurrentScans = getIntEnvWithDefault("CONCURRENT_SCANS", 10)
+
+	// Connectivity check configuration
+	cfg.ConnectivityMaxRetries = getIntEnvWithDefault("CONNECTIVITY_MAX_RETRIES", 3)
+	cfg.ConnectivityRetryInterval = getIntEnvWithDefault("CONNECTIVITY_RETRY_INTERVAL", 5)
+	cfg.ConnectivityTimeout = getIntEnvWithDefault("CONNECTIVITY_TIMEOUT", 5)
 
 	return cfg, nil
 }
