@@ -1,5 +1,5 @@
 name: Release GSS image
-run-name: 📦 [younsl/gss] Release GSS image to ghcr.io
+run-name: 📦 [younsl/gss] Release GSS image to ghcr.io ${{ github.ref_name }}
 
 on:
   push:
