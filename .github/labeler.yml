@@ -1,112 +1,120 @@
 # Core (core/)
 'core/pkg':
-  - 'pkg/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'pkg/**/*'
 
 'core/internal':
-  - 'internal/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'internal/**/*'
 
 'core/cmd':
-  - 'cmd/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'cmd/**/*'
 
 # API (api/)
 'api/rest':
-  - 'api/rest/**/*'
-  - 'internal/api/rest/**/*'
-  - 'pkg/api/rest/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'api/rest/**/*'
+  - any-glob-to-any-file: 'internal/api/rest/**/*'
+  - any-glob-to-any-file: 'pkg/api/rest/**/*'
 
 'api/grpc':
-  - 'api/grpc/**/*'
-  - 'internal/api/grpc/**/*'
-  - 'pkg/api/grpc/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'api/grpc/**/*'
+  - any-glob-to-any-file: 'internal/api/grpc/**/*'
+  - any-glob-to-any-file: 'pkg/api/grpc/**/*'
 
 'api/proto':
-  - 'api/proto/**/*'
-  - 'proto/**/*'
-  - '**/*.proto'
+- changed-files:
+  - any-glob-to-any-file: 'api/proto/**/*'
+  - any-glob-to-any-file: 'proto/**/*'
+  - any-glob-to-any-file: '**/*.proto'
 
 # Data and models (pkg/models/, internal/models/)
 'data/models':
-  - 'internal/models/**/*'
-  - 'pkg/models/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'internal/models/**/*'
+  - any-glob-to-any-file: 'pkg/models/**/*'
 
 'data/database':
-  - 'internal/database/**/*'
-  - 'pkg/database/**/*'
-  - 'migrations/**/*'
-  - '**/*.sql'
+- changed-files:
+  - any-glob-to-any-file: 'internal/database/**/*'
+  - any-glob-to-any-file: 'pkg/database/**/*'
+  - any-glob-to-any-file: 'migrations/**/*'
+  - any-glob-to-any-file: '**/*.sql'
 
 'data/cache':
-  - 'internal/cache/**/*'
-  - 'pkg/cache/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'internal/cache/**/*'
+  - any-glob-to-any-file: 'pkg/cache/**/*'
 
-# Infrastructure (deploy/chart/)
-'infra/helm':
-  - 'deploy/chart/**/*'
+# Kubernetes (deploy/chart/)
+'kubernetes/helm':
+- changed-files:
+  - any-glob-to-any-file: 'deploy/chart/**/*'
 
 # Test
 'test/unit':
-  - '**/*_test.go'
+- changed-files:
+  - any-glob-to-any-file: '**/*_test.go'
 
 'test/integration':
-  - 'test/integration/**/*'
-  - 'tests/integration/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'test/integration/**/*'
+  - any-glob-to-any-file: 'tests/integration/**/*'
 
 'test/e2e':
-  - 'test/e2e/**/*'
-  - 'tests/e2e/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'test/e2e/**/*'
+  - any-glob-to-any-file: 'tests/e2e/**/*'
 
 # Configs
-'config/app':
-  - 'configs/**/*'
-  - 'config/**/*'
-  - '**/*.yaml'
-  - '**/*.yml'
-  - '**/*.toml'
-  - '**/*.json'
-  - '.env*'
-
 'config/build':
-  - 'go.mod'
-  - 'go.sum'
-  - 'Makefile'
-  - 'Dockerfile'
-  - 'docker-compose.yml'
-  - '.dockerignore'
+- changed-files:
+  - any-glob-to-any-file: 'go.mod'
+  - any-glob-to-any-file: 'go.sum'
+  - any-glob-to-any-file: 'Makefile'
+  - any-glob-to-any-file: 'Dockerfile'
+  - any-glob-to-any-file: 'docker-compose.yml'
+  - any-glob-to-any-file: '.dockerignore'
 
 # Documentations (docs/)
 'docs/api':
-  - 'api/swagger/**/*'
-  - 'docs/api/**/*'
-  - '**/*.swagger.json'
-  - '**/*.swagger.yaml'
+- changed-files:
+  - any-glob-to-any-file: 'api/swagger/**/*'
+  - any-glob-to-any-file: 'docs/api/**/*'
+  - any-glob-to-any-file: '**/*.swagger.json'
+  - any-glob-to-any-file: '**/*.swagger.yaml'
 
 'docs/guide':
-  - 'docs/**/*'
-  - '**/*.md'
-  - 'README.md'
+- changed-files:
+  - any-glob-to-any-file: 'docs/**/*'
+  - any-glob-to-any-file: '**/*.md'
+  - any-glob-to-any-file: 'README.md'
 
 # Utilities (util/)
 'util/tools':
-  - 'tools/**/*'
-  - 'scripts/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'tools/**/*'
+  - any-glob-to-any-file: 'scripts/**/*'
 
 'util/vendor':
-  - 'vendor/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'vendor/**/*'
 
 # Security (security/)
 'security/auth':
-  - 'internal/auth/**/*'
-  - 'pkg/auth/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'internal/auth/**/*'
+  - any-glob-to-any-file: 'pkg/auth/**/*'
 
 'security/fix':
-  - 'internal/security/**/*'
-  - 'pkg/security/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'internal/security/**/*'
+  - any-glob-to-any-file: 'pkg/security/**/*'
 
 # Miscellaneous (go.mod, go.sum, etc.)
 'chore/dependencies':
-  - 'go.mod'
-  - 'go.sum'
-
-'chore/refactor':
-  - any: ['**/*.go']
-    all: ['!**/*_test.go', '!docs/**/*', '!*.md'] 
+- changed-files:
+  - any-glob-to-any-file: 'go.mod'
+  - any-glob-to-any-file: 'go.sum'
