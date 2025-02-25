@@ -34,6 +34,12 @@ func TestCanvasPublisher_PublishScanResult(t *testing.T) {
 				"ok":    true,
 				"error": "",
 			})
+		case "/canvases.edit":
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":    true,
+				"error": "",
+			})
 		default:
 			t.Logf("Unhandled path: %s", r.URL.Path)
 			w.WriteHeader(http.StatusNotFound)
@@ -47,11 +53,13 @@ func TestCanvasPublisher_PublishScanResult(t *testing.T) {
 
 	// Create test publisher with mock server URL
 	publisher := &CanvasPublisher{
-		client:     slack.New("xapp-test-token"),
-		channelID:  "test-channel",
-		canvasName: "Test Canvas",
-		apiToken:   "xapp-test-token",
-		baseURL:    mockServer.URL,
+		client:        slack.New("xoxb-test-token"),
+		channelID:     "test-channel",
+		apiToken:      "xoxb-test-token",
+		baseURL:       mockServer.URL,
+		canvasID:      "test-canvas",
+		organization:  "test-org",
+		githubBaseURL: "https://github.example.com/api/v3",
 	}
 
 	result := &models.ScanResult{
@@ -106,7 +114,7 @@ func TestConvertToKST(t *testing.T) {
 }
 
 func TestCreateCanvasBlocks(t *testing.T) {
-	publisher := NewCanvasPublisher("test-token", "test-channel", "Test Canvas")
+	publisher := NewCanvasPublisher("test-token", "test-channel", "Test Canvas", "test-org", "https://github.example.com/api/v3")
 	result := &models.ScanResult{
 		TotalRepos: 1,
 		Workflows: []models.WorkflowInfo{
@@ -205,8 +213,8 @@ func TestNewCanvasPublisherWithMissingEnv(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:        "Invalid token format (not xapp)",
-			token:       "xoxb-test-token",
+			name:        "Invalid token format (not xoxb)",
+			token:       "xapp-test-token",
 			channelID:   "C123456",
 			canvasName:  "Test Canvas",
 			expectError: true,
@@ -215,7 +223,7 @@ func TestNewCanvasPublisherWithMissingEnv(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			publisher := NewCanvasPublisher(tt.token, tt.channelID, tt.canvasName)
+			publisher := NewCanvasPublisher(tt.token, tt.channelID, tt.canvasName, "test-org", "https://github.example.com/api/v3")
 			result := &models.ScanResult{
 				TotalRepos: 1,
 				Workflows: []models.WorkflowInfo{

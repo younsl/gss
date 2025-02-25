@@ -2,18 +2,31 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
-	"github.com/younsl/ghes-schedule-scanner/internal/config"
-	"github.com/younsl/ghes-schedule-scanner/pkg/canvas"
+	"github.com/younsl/ghes-schedule-scanner/pkg/publisher"
 	"github.com/younsl/ghes-schedule-scanner/pkg/reporter"
 	"github.com/younsl/ghes-schedule-scanner/pkg/scanner"
 )
 
+type Config struct {
+	LogLevel           string
+	GitHubToken        string
+	GitHubBaseURL      string
+	GitHubOrganization string
+	ConcurrentScans    int
+	PublisherType      string
+	SlackToken         string
+	SlackChannelID     string
+	SlackCanvasID      string
+}
+
 type app struct {
 	scanner   *scanner.Scanner
 	reporter  *reporter.Reporter
-	publisher *canvas.CanvasPublisher
+	publisher publisher.Publisher
 }
 
 func main() {
@@ -24,13 +37,39 @@ func main() {
 }
 
 func run() error {
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"config": fmt.Sprintf("%+v", cfg),
-			"error":  err,
-		}).Error("Failed to load config")
-		return fmt.Errorf("failed to load config: %w", err)
+	cfg := Config{
+		LogLevel:           os.Getenv("LOG_LEVEL"),
+		GitHubToken:        os.Getenv("GITHUB_TOKEN"),
+		GitHubBaseURL:      os.Getenv("GITHUB_BASE_URL"),
+		GitHubOrganization: os.Getenv("GITHUB_ORG"),
+		ConcurrentScans:    10,
+		PublisherType:      os.Getenv("PUBLISHER_TYPE"),
+		SlackToken:         os.Getenv("SLACK_TOKEN"),
+		SlackChannelID:     os.Getenv("SLACK_CHANNEL_ID"),
+		SlackCanvasID:      os.Getenv("SLACK_CANVAS_ID"),
+	}
+
+	// ConcurrentScans 환경 변수가 설정된 경우 파싱
+	if concurrentScansStr := os.Getenv("CONCURRENT_SCANS"); concurrentScansStr != "" {
+		if concurrentScans, err := strconv.Atoi(concurrentScansStr); err == nil {
+			cfg.ConcurrentScans = concurrentScans
+		}
+	}
+
+	// PublisherType이 설정되지 않은 경우 기본값 설정
+	if cfg.PublisherType == "" {
+		cfg.PublisherType = "console" // 기본값
+	}
+
+	// 필수 환경 변수 확인
+	if cfg.GitHubOrganization == "" {
+		logrus.Error("GitHub organization name is empty. Please set GITHUB_ORG environment variable.")
+		return fmt.Errorf("GitHub organization name is required")
+	}
+
+	if cfg.GitHubToken == "" {
+		logrus.Error("GitHub token is empty. Please set GITHUB_TOKEN environment variable.")
+		return fmt.Errorf("GitHub token is required")
 	}
 
 	// Initialize logging level from config
@@ -46,18 +85,23 @@ func run() error {
 		return fmt.Errorf("workflow scan failed: %w", err)
 	}
 
-	publisher := initializeCanvasPublisher(cfg)
+	// 팩토리 패턴을 사용하여 Publisher 생성
+	pub, err := initializePublisher(cfg.PublisherType, cfg)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to initialize publisher")
+		return fmt.Errorf("failed to initialize publisher: %w", err)
+	}
 
-	// Publish results to Slack Canvas
-	if err := publisher.PublishScanResult(result); err != nil {
-		logrus.WithError(err).Error("Failed to publish to canvas")
-		return fmt.Errorf("failed to publish to canvas: %w", err)
+	// 결과 게시
+	if err := pub.PublishScanResult(result); err != nil {
+		logrus.WithError(err).Error("Failed to publish results")
+		return fmt.Errorf("failed to publish results: %w", err)
 	}
 
 	return nil
 }
 
-func initializeScanner(cfg *config.Config) *scanner.Scanner {
+func initializeScanner(cfg Config) *scanner.Scanner {
 	client := scanner.InitializeGitHubClient(cfg.GitHubToken, cfg.GitHubBaseURL)
 	return scanner.NewScanner(client, cfg.ConcurrentScans)
 }
@@ -67,14 +111,25 @@ func initializeReporter() *reporter.Reporter {
 	return reporter.NewReporter(formatter)
 }
 
-func initializeCanvasPublisher(cfg *config.Config) *canvas.CanvasPublisher {
-	return canvas.NewCanvasPublisher(
-		cfg.SlackBotToken,
-		cfg.SlackChannelID,
-		cfg.SlackCanvasID,
-		cfg.GitHubOrganization,
-		cfg.GitHubBaseURL,
-	)
+func initializePublisher(publisherType string, cfg Config) (publisher.Publisher, error) {
+	factory := publisher.NewPublisherFactory()
+
+	// 설정 맵 생성
+	config := map[string]string{
+		"slackBotToken":      cfg.SlackToken,
+		"slackChannelID":     cfg.SlackChannelID,
+		"slackCanvasID":      cfg.SlackCanvasID,
+		"githubOrganization": cfg.GitHubOrganization,
+		"githubBaseURL":      cfg.GitHubBaseURL,
+	}
+
+	pub, err := factory.CreatePublisher(publisherType, config)
+	if err != nil {
+		return nil, err
+	}
+
+	logrus.WithField("publisherType", pub.GetName()).Info("Publisher initialized")
+	return pub, nil
 }
 
 func setLogLevel(level string) {

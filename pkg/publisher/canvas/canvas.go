@@ -378,3 +378,8 @@ func atoi(s string) int {
 	}
 	return i
 }
+
+// GetName은 Publisher의 이름을 반환합니다
+func (c *CanvasPublisher) GetName() string {
+	return "canvas"
+}

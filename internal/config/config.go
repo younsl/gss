@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Config struct {
@@ -35,6 +37,9 @@ type Config struct {
 
 	// ConcurrentScans is the maximum number of concurrent repository scans
 	ConcurrentScans int
+
+	// PublisherType is the type of publisher to use
+	PublisherType string `env:"PUBLISHER_TYPE" envDefault:"canvas"`
 }
 
 func LoadConfig() (*Config, error) {
@@ -67,6 +72,10 @@ func LoadConfig() (*Config, error) {
 	cfg.LogLevel = getEnvWithDefault("LOG_LEVEL", "INFO")
 	cfg.RequestTimeout = getIntEnvWithDefault("REQUEST_TIMEOUT", 30)
 	cfg.ConcurrentScans = getIntEnvWithDefault("CONCURRENT_SCANS", 10)
+
+	logrus.WithFields(logrus.Fields{
+		"publisherType": cfg.PublisherType,
+	}).Debug("Configuration loaded")
 
 	return cfg, nil
 }
