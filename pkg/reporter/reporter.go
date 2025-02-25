@@ -3,7 +3,9 @@ package reporter
 import (
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/younsl/ghes-schedule-scanner/pkg/models"
 )
 
@@ -18,17 +20,41 @@ type Reporter struct {
 }
 
 func NewReporter(formatter ReportFormatter) *Reporter {
+	logrus.Debug("Initializing new reporter")
 	return &Reporter{formatter: formatter}
 }
 
 func (r *Reporter) GenerateReport(result *models.ScanResult) error {
-	output := r.formatter.FormatReport(result)
+	output, err := r.FormatResults(result)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to generate report")
+		return fmt.Errorf("formatting error: %w", err)
+	}
 	fmt.Print(output)
 	return nil
 }
 
+func (r *Reporter) FormatResults(result *models.ScanResult) (string, error) {
+	logrus.WithFields(logrus.Fields{
+		"workflowCount": len(result.Workflows),
+		"scanDuration":  result.ScanDuration,
+	}).Debug("Starting to format scan results")
+
+	if result == nil {
+		logrus.Error("Received nil scan result")
+		return "", fmt.Errorf("cannot format nil result")
+	}
+
+	formatted := r.formatter.FormatReport(result)
+	logrus.WithField("formattedLength", len(formatted)).Debug("Successfully formatted results")
+	return formatted, nil
+}
+
 func (f *ConsoleFormatter) FormatReport(result *models.ScanResult) string {
-	if result == nil || len(result.Workflows) == 0 {
+	logrus.Debug("Formatting results for console output")
+
+	if result == nil {
+		logrus.Error("Received nil result in console formatter")
 		return "No workflows found\n"
 	}
 
@@ -116,4 +142,9 @@ func atoi(s string) int {
 		return 0
 	}
 	return i
+}
+
+func formatDuration(d time.Duration) string {
+	logrus.WithField("duration", d).Debug("Formatting duration")
+	return d.Round(time.Millisecond).String()
 }

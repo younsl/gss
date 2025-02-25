@@ -8,9 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"encoding/base64"
-
 	"github.com/google/go-github/v50/github"
+	"github.com/sirupsen/logrus"
 	"github.com/younsl/ghes-schedule-scanner/pkg/models"
 	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v3"
@@ -24,6 +23,7 @@ type GitHubClient interface {
 	GetContents(ctx context.Context, owner, repo, path string, opts *github.RepositoryContentGetOptions) (*github.RepositoryContent, []*github.RepositoryContent, *github.Response, error)
 	ListWorkflowRuns(ctx context.Context, owner, repo string, workflowID int64, opts *github.ListWorkflowRunsOptions) (*github.WorkflowRuns, *github.Response, error)
 	ListCommits(ctx context.Context, owner, repo string, opts *github.CommitsListOptions) ([]*github.RepositoryCommit, *github.Response, error)
+	GetUser(ctx context.Context, username string) (*github.User, *github.Response, error)
 }
 
 // Scanner는 GitHub 워크플로우를 스캔하는 구조체입니다
@@ -47,6 +47,12 @@ func (s *Scanner) ScanScheduledWorkflows(org string) (*models.ScanResult, error)
 	start := time.Now()
 	maxRoutines := int32(0)
 	activeRoutines := int32(0)
+	totalRepos := 0
+
+	logrus.WithFields(logrus.Fields{
+		"organization":  org,
+		"maxConcurrent": s.concurrentScans,
+	}).Info("Starting workflow scan")
 
 	ctx := context.Background()
 	var results []models.WorkflowInfo
@@ -54,7 +60,6 @@ func (s *Scanner) ScanScheduledWorkflows(org string) (*models.ScanResult, error)
 	var scanErrors []error
 	var errorMutex sync.Mutex
 
-	// 아카이빙되지 않은 레포지터리만 조회
 	opts := &github.RepositoryListByOrgOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
 		Type:        "sources",
@@ -62,149 +67,228 @@ func (s *Scanner) ScanScheduledWorkflows(org string) (*models.ScanResult, error)
 		Direction:   "asc",
 	}
 
-	var allRepos []*github.Repository
 	for {
 		repos, resp, err := s.client.ListByOrg(ctx, org, opts)
 		if err != nil {
+			logrus.WithError(err).Error("Failed to list repositories")
 			return nil, fmt.Errorf("failed to list repositories: %w", err)
 		}
-		allRepos = append(allRepos, repos...)
+
+		totalRepos += len(repos)
+
+		logrus.WithFields(logrus.Fields{
+			"repoCount": len(repos),
+			"page":      opts.Page,
+		}).Debug("Processing repositories batch")
+
+		var wg sync.WaitGroup
+		semaphore := make(chan struct{}, s.concurrentScans)
+
+		for _, repo := range repos {
+			wg.Add(1)
+			semaphore <- struct{}{}
+
+			go func(repo *github.Repository) {
+				defer wg.Done()
+				defer func() { <-semaphore }()
+
+				routines := atomic.AddInt32(&activeRoutines, 1)
+				atomic.StoreInt32(&maxRoutines, max(atomic.LoadInt32(&maxRoutines), routines))
+
+				logrus.WithFields(logrus.Fields{
+					"repository":     *repo.Name,
+					"activeRoutines": routines,
+				}).Debug("Scanning repository")
+
+				workflows, err := s.scanRepository(ctx, repo)
+				if err != nil {
+					logrus.WithFields(logrus.Fields{
+						"repository": *repo.Name,
+						"error":      err,
+					}).Error("Failed to scan repository")
+
+					errorMutex.Lock()
+					scanErrors = append(scanErrors, fmt.Errorf("failed to scan repository %s: %w", *repo.Name, err))
+					errorMutex.Unlock()
+					return
+				}
+
+				if len(workflows) > 0 {
+					logrus.WithFields(logrus.Fields{
+						"repository":    *repo.Name,
+						"workflowCount": len(workflows),
+					}).Info("Found scheduled workflows")
+
+					resultMutex.Lock()
+					results = append(results, workflows...)
+					resultMutex.Unlock()
+				}
+
+				atomic.AddInt32(&activeRoutines, -1)
+			}(repo)
+		}
+
+		wg.Wait()
+
 		if resp.NextPage == 0 {
 			break
 		}
 		opts.Page = resp.NextPage
 	}
 
-	sem := make(chan struct{}, s.concurrentScans)
-	var wg sync.WaitGroup
-
-	for i, repo := range allRepos {
-		if repo.GetArchived() {
-			continue
-		}
-
-		log.Printf("Scanning repository (%d/%d): %s", i+1, len(allRepos), repo.GetName())
-		wg.Add(1)
-		sem <- struct{}{}
-
-		go func(repo *github.Repository) {
-			atomic.AddInt32(&activeRoutines, 1)
-			atomic.CompareAndSwapInt32(&maxRoutines, atomic.LoadInt32(&activeRoutines)-1, atomic.LoadInt32(&activeRoutines))
-
-			defer func() {
-				atomic.AddInt32(&activeRoutines, -1)
-				wg.Done()
-				<-sem
-			}()
-
-			if err := s.scanRepository(ctx, org, repo, &results, &resultMutex); err != nil {
-				errorMutex.Lock()
-				scanErrors = append(scanErrors, err)
-				errorMutex.Unlock()
-			}
-		}(repo)
-	}
-
-	wg.Wait()
-	log.Printf("Scan completed: %d repositories in %v with max %d concurrent goroutines",
-		len(allRepos), time.Since(start), maxRoutines)
+	duration := time.Since(start)
+	logrus.WithFields(logrus.Fields{
+		"duration":       duration,
+		"maxConcurrent":  maxRoutines,
+		"totalWorkflows": len(results),
+		"errorCount":     len(scanErrors),
+	}).Info("Scan completed")
 
 	if len(scanErrors) > 0 {
-		return nil, fmt.Errorf("encountered %d errors during scan: %v", len(scanErrors), scanErrors)
+		logrus.WithField("errors", scanErrors).Warn("Some repositories failed to scan")
 	}
 
 	return &models.ScanResult{
-		Workflows:  results,
-		TotalRepos: len(allRepos),
+		Workflows:          results,
+		TotalRepos:         totalRepos,
+		ScanDuration:       duration,
+		MaxConcurrentScans: atomic.LoadInt32(&maxRoutines),
 	}, nil
 }
 
 // scanRepository scans a single repository for workflow files and their schedules
 // Extracts cron schedules and last run status for each workflow
 // Updates results slice through mutex for thread safety
-func (s *Scanner) scanRepository(ctx context.Context, org string, repo *github.Repository, results *[]models.WorkflowInfo, resultMutex *sync.Mutex) error {
-	workflows, _, err := s.client.ListWorkflows(ctx, org, repo.GetName(), nil)
+func (s *Scanner) scanRepository(ctx context.Context, repo *github.Repository) ([]models.WorkflowInfo, error) {
+	logrus.WithField("repository", *repo.Name).Debug("Starting repository scan")
+
+	workflows, _, err := s.client.ListWorkflows(ctx, *repo.Owner.Login, *repo.Name, &github.ListOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to list workflows for %s: %w", repo.GetName(), err)
+		return nil, fmt.Errorf("failed to list workflows: %w", err)
 	}
+
+	var scheduledWorkflows []models.WorkflowInfo
 
 	for _, workflow := range workflows.Workflows {
-		content, _, _, err := s.client.GetContents(ctx, org, repo.GetName(), workflow.GetPath(), nil)
-		if err != nil {
-			return fmt.Errorf("failed to get workflow content: %w", err)
-		}
+		logrus.WithFields(logrus.Fields{
+			"repository": *repo.Name,
+			"workflow":   *workflow.Name,
+		}).Debug("Checking workflow")
 
-		// GetContent()의 두 반환값을 모두 처리
-		contentStr, err := content.GetContent()
-		if err != nil {
-			return fmt.Errorf("failed to get content string: %w", err)
-		}
+		if isScheduled, schedule := s.checkWorkflowSchedule(ctx, repo, workflow); isScheduled {
+			logrus.WithFields(logrus.Fields{
+				"repository": *repo.Name,
+				"workflow":   *workflow.Name,
+				"schedule":   schedule,
+			}).Info("Found scheduled workflow")
 
-		decodedContent, err := base64.StdEncoding.DecodeString(contentStr)
-		if err != nil {
-			return fmt.Errorf("failed to decode workflow content: %w", err)
-		}
-
-		// 워크플로우 콘텐츠 파싱
-		var workflowData map[string]interface{}
-		if err := yaml.Unmarshal([]byte(decodedContent), &workflowData); err != nil {
-			// YAML 파싱 에러를 상위로 전파
-			return fmt.Errorf("failed to parse workflow %s: %w", workflow.GetPath(), err)
-		}
-
-		schedules, err := extractSchedulesWithValidation(decodedContent)
-		if err != nil || len(schedules) == 0 {
-			log.Printf("No schedules found in %s: %v", workflow.GetPath(), err)
-			continue
-		}
-
-		runs, _, err := s.client.ListWorkflowRuns(ctx, org, repo.GetName(), workflow.GetID(), &github.ListWorkflowRunsOptions{
-			ListOptions: github.ListOptions{PerPage: 1},
-		})
-		if err != nil {
-			return fmt.Errorf("failed to get workflow runs for %s: %w", workflow.GetName(), err)
-		}
-
-		lastStatus := "Unknown"
-		if runs != nil && len(runs.WorkflowRuns) > 0 {
-			lastStatus = runs.WorkflowRuns[0].GetStatus()
-		}
-
-		commits, _, err := s.client.ListCommits(ctx, org, repo.GetName(), &github.CommitsListOptions{
-			Path:        workflow.GetPath(),
-			ListOptions: github.ListOptions{PerPage: 1},
-		})
-		if err != nil {
-			log.Printf("Failed to get commits for %s: %v", workflow.GetPath(), err)
-			continue
-		}
-
-		lastCommitter := "Unknown"
-		if len(commits) > 0 {
-			commit := commits[0]
-			if author := commit.GetAuthor(); author != nil {
-				lastCommitter = author.GetLogin()
+			// 워크플로우 실행 이력 가져오기
+			runs, _, err := s.client.ListWorkflowRuns(ctx, *repo.Owner.Login, *repo.Name, *workflow.ID, &github.ListWorkflowRunsOptions{
+				ListOptions: github.ListOptions{
+					PerPage: 1, // 최신 실행 하나만 가져오기
+				},
+			})
+			if err != nil {
+				logrus.WithError(err).Warn("Failed to get workflow runs")
+				// 에러가 나도 계속 진행
 			}
-			if lastCommitter == "" && commit.Commit != nil && commit.Commit.Author != nil {
-				lastCommitter = commit.Commit.Author.GetName()
+
+			var lastStatus string
+			if runs != nil && len(runs.WorkflowRuns) > 0 {
+				lastStatus = *runs.WorkflowRuns[0].Status
 			}
-			if lastCommitter == "" {
+
+			// 마지막 커미터 정보 가져오기
+			commits, _, err := s.client.ListCommits(ctx, *repo.Owner.Login, *repo.Name, &github.CommitsListOptions{
+				Path: workflow.GetPath(),
+				ListOptions: github.ListOptions{
+					PerPage: 1, // 최신 커밋 하나만 가져오기
+				},
+			})
+			if err != nil {
+				logrus.WithError(err).Warn("Failed to get commits")
+				// 에러가 나도 계속 진행
+			}
+
+			var lastCommitter string
+			var isActiveUser bool
+			if len(commits) > 0 && commits[0].Author != nil {
+				if commits[0].Author.Login != nil {
+					user, _, err := s.client.GetUser(ctx, *commits[0].Author.Login)
+					if err != nil {
+						// API 에러가 발생한 경우, 커밋의 author name은 표시하되 Inactive로 표시
+						lastCommitter = commits[0].Commit.GetAuthor().GetName()
+						isActiveUser = false
+					} else if user == nil {
+						// 사용자가 존재하지 않는 경우 (탈퇴 등)
+						lastCommitter = commits[0].Commit.GetAuthor().GetName()
+						isActiveUser = false
+					} else {
+						lastCommitter = commits[0].Commit.GetAuthor().GetName()
+						isActiveUser = true
+					}
+				} else if commits[0].Commit.GetAuthor() != nil {
+					// Author.Login은 없지만 커밋의 author 정보는 있는 경우
+					lastCommitter = commits[0].Commit.GetAuthor().GetName()
+					isActiveUser = false
+				} else {
+					lastCommitter = "Unknown"
+					isActiveUser = false
+				}
+			} else {
 				lastCommitter = "Unknown"
+				isActiveUser = false
 			}
-		}
 
-		resultMutex.Lock()
-		*results = append(*results, models.WorkflowInfo{
-			RepoName:      repo.GetName(),
-			WorkflowName:  workflow.GetName(),
-			WorkflowID:    workflow.GetID(),
-			CronSchedules: schedules,
-			LastStatus:    lastStatus,
-			LastCommitter: lastCommitter,
-		})
-		resultMutex.Unlock()
+			workflowInfo := models.WorkflowInfo{
+				RepoName:         *repo.Name,
+				WorkflowName:     *workflow.Name,
+				WorkflowID:       *workflow.ID,
+				WorkflowFileName: *workflow.Path,
+				CronSchedules:    []string{schedule},
+				LastStatus:       lastStatus,
+				LastCommitter:    lastCommitter,
+				IsActiveUser:     isActiveUser,
+			}
+
+			scheduledWorkflows = append(scheduledWorkflows, workflowInfo)
+		}
 	}
-	return nil
+
+	return scheduledWorkflows, nil
+}
+
+// checkWorkflowSchedule checks if a workflow is scheduled based on its cron schedule
+// Returns true if the workflow is scheduled and its cron schedule
+func (s *Scanner) checkWorkflowSchedule(ctx context.Context, repo *github.Repository, workflow *github.Workflow) (bool, string) {
+	content, _, _, err := s.client.GetContents(ctx, *repo.Owner.Login, *repo.Name, workflow.GetPath(), nil)
+	if err != nil {
+		logrus.WithError(err).Errorf("Failed to get workflow content: %s", workflow.GetPath())
+		return false, ""
+	}
+
+	// GetContent()로 콘텐츠 가져오기
+	contentStr, err := content.GetContent()
+	if err != nil {
+		logrus.WithError(err).Error("Failed to get content string")
+		return false, ""
+	}
+
+	// base64 디코딩 시도 제거
+	// YAML 직접 파싱
+	var workflowData map[string]interface{}
+	if err := yaml.Unmarshal([]byte(contentStr), &workflowData); err != nil {
+		logrus.WithError(err).Errorf("Failed to parse workflow %s", workflow.GetPath())
+		return false, ""
+	}
+
+	schedules, err := extractSchedulesWithValidation([]byte(contentStr))
+	if err != nil || len(schedules) == 0 {
+		logrus.WithField("path", workflow.GetPath()).Debug("No schedules found")
+		return false, ""
+	}
+
+	return true, schedules[0]
 }
 
 // extractSchedulesWithValidation parses YAML content and extracts cron schedules
@@ -277,4 +361,8 @@ func (a *GitHubClientAdapter) ListWorkflowRuns(ctx context.Context, owner, repo 
 
 func (a *GitHubClientAdapter) ListCommits(ctx context.Context, owner, repo string, opts *github.CommitsListOptions) ([]*github.RepositoryCommit, *github.Response, error) {
 	return a.client.Repositories.ListCommits(ctx, owner, repo, opts)
+}
+
+func (a *GitHubClientAdapter) GetUser(ctx context.Context, username string) (*github.User, *github.Response, error) {
+	return a.client.Users.Get(ctx, username)
 }
