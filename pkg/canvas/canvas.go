@@ -303,9 +303,11 @@ func (c *CanvasPublisher) createWorkflowRow(wf models.WorkflowInfo, index int) s
 		workflowFileName)
 
 	return slack.NewSectionBlock(
-		slack.NewTextBlockObject("mrkdwn",
-			fmt.Sprintf("* **[%d]** **%s**\n"+
-				"  * Workflow: `%s` <%s|🔗>\n"+
+		&slack.TextBlockObject{
+			Type: "mrkdwn",
+			Text: fmt.Sprintf("* **[%d] %s**\n"+
+				"  * Workflow: `%s`\n"+
+				"  * Workflow URL: %s\n"+
 				"  * UTC Schedule: `%s`\n"+
 				"  * KST Schedule: `%s`\n"+
 				"  * Last Status: %s `%s`\n"+
@@ -320,9 +322,9 @@ func (c *CanvasPublisher) createWorkflowRow(wf models.WorkflowInfo, index int) s
 				wf.LastStatus,
 				committerStatus,
 			),
-			false, false,
-		),
-		nil, nil,
+		},
+		nil,
+		nil,
 	)
 }
 
