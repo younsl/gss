@@ -95,6 +95,10 @@ configMap:
     # Canvas URL format: https://workspace.slack.com/docs/CHANNEL_ID/CANVAS_ID
     SLACK_CANVAS_ID: null
 
+    # -- Publisher type to use (Available values: console, slack-canvas)
+    # This value determines which publisher will be used to output scan results
+    PUBLISHER_TYPE: "slack-canvas"
+
 # -- Name of the secret containing sensitive data
 # This secret is used to store the GitHub access token with permissions
 # to scan repositories.

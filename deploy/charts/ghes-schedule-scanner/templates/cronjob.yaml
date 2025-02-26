@@ -75,6 +75,11 @@ spec:
                 configMapKeyRef:
                   name: {{ .Chart.Name }}-config
                   key: SLACK_CANVAS_ID
+            - name: PUBLISHER_TYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Chart.Name }}-config
+                  key: PUBLISHER_TYPE
             resources:
               limits:
                 cpu: {{ .Values.resources.limits.cpu }}
