@@ -6,6 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/younsl/ghes-schedule-scanner/internal/config"
 	"github.com/younsl/ghes-schedule-scanner/pkg/canvas"
+	"github.com/younsl/ghes-schedule-scanner/pkg/connectivity"
 	"github.com/younsl/ghes-schedule-scanner/pkg/reporter"
 	"github.com/younsl/ghes-schedule-scanner/pkg/scanner"
 )
@@ -36,6 +37,10 @@ func run() error {
 	// Initialize logging level from config
 	setLogLevel(cfg.LogLevel)
 
+	// Verify connectivity to GitHub Enterprise Server before proceeding
+	connectivityChecker := initializeConnectivityChecker(cfg)
+	connectivityChecker.MustVerifyConnectivity()
+
 	scanner := initializeScanner(cfg)
 	logrus.WithField("baseURL", cfg.GitHubBaseURL).Info("GitHub Base URL configured")
 
@@ -55,6 +60,16 @@ func run() error {
 	}
 
 	return nil
+}
+
+func initializeConnectivityChecker(cfg *config.Config) *connectivity.Checker {
+	connectivityConfig := connectivity.Config{
+		BaseURL:       cfg.GitHubBaseURL,
+		MaxRetries:    cfg.ConnectivityMaxRetries,
+		RetryInterval: cfg.ConnectivityRetryInterval,
+		Timeout:       cfg.ConnectivityTimeout,
+	}
+	return connectivity.NewChecker(connectivityConfig)
 }
 
 func initializeScanner(cfg *config.Config) *scanner.Scanner {
