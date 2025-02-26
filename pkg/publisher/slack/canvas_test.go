@@ -1,4 +1,4 @@
-package canvas
+package slack
 
 import (
 	"encoding/json"
