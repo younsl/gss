@@ -105,15 +105,16 @@ Set up environment variables:
 ```bash
 # Required
 export GITHUB_TOKEN="ghp_token"
-export GITHUB_ORGANIZATION="your_org"
+export GITHUB_ORG="your_org"
 export GITHUB_BASE_URL="https://your-ghes-domain"
 
 # Optional
-export LOG_LEVEL="INFO"
+export LOG_LEVEL="INFO"  # Default log level
+export REQUEST_TIMEOUT="30"  # Default timeout in seconds
 export PUBLISHER_TYPE="console"  # or "slack-canvas"
 
 # For Slack Canvas
-export SLACK_BOT_TOKEN="xoxb-token"
+export SLACK_TOKEN="xoxb-token"
 export SLACK_CHANNEL_ID="F01234ABCD"
 export SLACK_CANVAS_ID="C01234ABCD"
 ```
