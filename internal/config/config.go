@@ -39,7 +39,7 @@ type Config struct {
 	ConcurrentScans int
 
 	// PublisherType is the type of publisher to use
-	PublisherType string `env:"PUBLISHER_TYPE" envDefault:"console"`
+	PublisherType string
 
 	// ConnectivityMaxRetries is the maximum number of retry attempts for connectivity check
 	ConnectivityMaxRetries int
