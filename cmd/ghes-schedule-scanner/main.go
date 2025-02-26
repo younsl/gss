@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/sirupsen/logrus"
+	"github.com/younsl/ghes-schedule-scanner/pkg/connectivity"
 	"github.com/younsl/ghes-schedule-scanner/pkg/publisher"
 	"github.com/younsl/ghes-schedule-scanner/pkg/reporter"
 	"github.com/younsl/ghes-schedule-scanner/pkg/scanner"
@@ -75,6 +76,10 @@ func run() error {
 	// Initialize logging level from config
 	setLogLevel(cfg.LogLevel)
 
+	// Verify connectivity to GitHub Enterprise Server before proceeding
+	connectivityChecker := initializeConnectivityChecker(cfg)
+	connectivityChecker.MustVerifyConnectivity()
+
 	scanner := initializeScanner(cfg)
 	logrus.WithField("baseURL", cfg.GitHubBaseURL).Info("GitHub Base URL configured")
 
@@ -99,6 +104,16 @@ func run() error {
 	}
 
 	return nil
+}
+
+func initializeConnectivityChecker(cfg Config) *connectivity.Checker {
+	connectivityConfig := connectivity.Config{
+		BaseURL:       cfg.GitHubBaseURL,
+		MaxRetries:    3, // 기본값 설정 또는 환경 변수에서 가져올 수 있음
+		RetryInterval: 5,
+		Timeout:       5,
+	}
+	return connectivity.NewChecker(connectivityConfig)
 }
 
 func initializeScanner(cfg Config) *scanner.Scanner {

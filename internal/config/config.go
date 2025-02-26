@@ -39,7 +39,16 @@ type Config struct {
 	ConcurrentScans int
 
 	// PublisherType is the type of publisher to use
-	PublisherType string `env:"PUBLISHER_TYPE" envDefault:"canvas"`
+	PublisherType string `env:"PUBLISHER_TYPE" envDefault:"console"`
+
+	// ConnectivityMaxRetries is the maximum number of retry attempts for connectivity check
+	ConnectivityMaxRetries int
+
+	// ConnectivityRetryInterval is the duration to wait between retries in seconds for connectivity check
+	ConnectivityRetryInterval int
+
+	// ConnectivityTimeout is the timeout for each connection attempt in seconds for connectivity check
+	ConnectivityTimeout int
 }
 
 func LoadConfig() (*Config, error) {
@@ -72,9 +81,18 @@ func LoadConfig() (*Config, error) {
 	cfg.LogLevel = getEnvWithDefault("LOG_LEVEL", "INFO")
 	cfg.RequestTimeout = getIntEnvWithDefault("REQUEST_TIMEOUT", 30)
 	cfg.ConcurrentScans = getIntEnvWithDefault("CONCURRENT_SCANS", 10)
+	cfg.PublisherType = getEnvWithDefault("PUBLISHER_TYPE", "console")
+
+	// Connectivity check configuration
+	cfg.ConnectivityMaxRetries = getIntEnvWithDefault("CONNECTIVITY_MAX_RETRIES", 3)
+	cfg.ConnectivityRetryInterval = getIntEnvWithDefault("CONNECTIVITY_RETRY_INTERVAL", 5)
+	cfg.ConnectivityTimeout = getIntEnvWithDefault("CONNECTIVITY_TIMEOUT", 5)
 
 	logrus.WithFields(logrus.Fields{
-		"publisherType": cfg.PublisherType,
+		"publisherType":             cfg.PublisherType,
+		"connectivityMaxRetries":    cfg.ConnectivityMaxRetries,
+		"connectivityRetryInterval": cfg.ConnectivityRetryInterval,
+		"connectivityTimeout":       cfg.ConnectivityTimeout,
 	}).Debug("Configuration loaded")
 
 	return cfg, nil
