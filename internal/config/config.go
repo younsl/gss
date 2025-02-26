@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Config struct {
@@ -76,6 +78,19 @@ func LoadConfig() (*Config, error) {
 	cfg.LogLevel = getEnvWithDefault("LOG_LEVEL", "INFO")
 	cfg.RequestTimeout = getIntEnvWithDefault("REQUEST_TIMEOUT", 30)
 	cfg.ConcurrentScans = getIntEnvWithDefault("CONCURRENT_SCANS", 10)
+	cfg.PublisherType = getEnvWithDefault("PUBLISHER_TYPE", "console")
+
+	// Connectivity check configuration
+	cfg.ConnectivityMaxRetries = getIntEnvWithDefault("CONNECTIVITY_MAX_RETRIES", 3)
+	cfg.ConnectivityRetryInterval = getIntEnvWithDefault("CONNECTIVITY_RETRY_INTERVAL", 5)
+	cfg.ConnectivityTimeout = getIntEnvWithDefault("CONNECTIVITY_TIMEOUT", 5)
+
+	logrus.WithFields(logrus.Fields{
+		"publisherType":             cfg.PublisherType,
+		"connectivityMaxRetries":    cfg.ConnectivityMaxRetries,
+		"connectivityRetryInterval": cfg.ConnectivityRetryInterval,
+		"connectivityTimeout":       cfg.ConnectivityTimeout,
+	}).Debug("Configuration loaded")
 
 	// Connectivity check configuration
 	cfg.ConnectivityMaxRetries = getIntEnvWithDefault("CONNECTIVITY_MAX_RETRIES", 3)

@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 	"github.com/younsl/ghes-schedule-scanner/internal/config"
@@ -11,10 +13,22 @@ import (
 	"github.com/younsl/ghes-schedule-scanner/pkg/scanner"
 )
 
+type Config struct {
+	LogLevel           string
+	GitHubToken        string
+	GitHubBaseURL      string
+	GitHubOrganization string
+	ConcurrentScans    int
+	PublisherType      string
+	SlackToken         string
+	SlackChannelID     string
+	SlackCanvasID      string
+}
+
 type app struct {
 	scanner   *scanner.Scanner
 	reporter  *reporter.Reporter
-	publisher *canvas.CanvasPublisher
+	publisher publisher.Publisher
 }
 
 func main() {
@@ -25,13 +39,11 @@ func main() {
 }
 
 func run() error {
+	// 내부 config 패키지를 사용하도록 변경
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"config": fmt.Sprintf("%+v", cfg),
-			"error":  err,
-		}).Error("Failed to load config")
-		return fmt.Errorf("failed to load config: %w", err)
+		logrus.WithError(err).Error("Failed to load configuration")
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Initialize logging level from config
@@ -51,12 +63,17 @@ func run() error {
 		return fmt.Errorf("workflow scan failed: %w", err)
 	}
 
-	publisher := initializeCanvasPublisher(cfg)
+	// 팩토리 패턴을 사용하여 Publisher 생성
+	pub, err := initializePublisher(cfg.PublisherType, cfg)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to initialize publisher")
+		return fmt.Errorf("failed to initialize publisher: %w", err)
+	}
 
-	// Publish results to Slack Canvas
-	if err := publisher.PublishScanResult(result); err != nil {
-		logrus.WithError(err).Error("Failed to publish to canvas")
-		return fmt.Errorf("failed to publish to canvas: %w", err)
+	// 결과 게시
+	if err := pub.PublishScanResult(result); err != nil {
+		logrus.WithError(err).Error("Failed to publish results")
+		return fmt.Errorf("failed to publish results: %w", err)
 	}
 
 	return nil
@@ -82,14 +99,25 @@ func initializeReporter() *reporter.Reporter {
 	return reporter.NewReporter(formatter)
 }
 
-func initializeCanvasPublisher(cfg *config.Config) *canvas.CanvasPublisher {
-	return canvas.NewCanvasPublisher(
-		cfg.SlackBotToken,
-		cfg.SlackChannelID,
-		cfg.SlackCanvasID,
-		cfg.GitHubOrganization,
-		cfg.GitHubBaseURL,
-	)
+func initializePublisher(publisherType string, cfg *config.Config) (publisher.Publisher, error) {
+	factory := publisher.NewPublisherFactory()
+
+	// 설정 맵 생성
+	config := map[string]string{
+		"slackBotToken":      cfg.SlackBotToken,
+		"slackChannelID":     cfg.SlackChannelID,
+		"slackCanvasID":      cfg.SlackCanvasID,
+		"githubOrganization": cfg.GitHubOrganization,
+		"githubBaseURL":      cfg.GitHubBaseURL,
+	}
+
+	pub, err := factory.CreatePublisher(publisherType, config)
+	if err != nil {
+		return nil, err
+	}
+
+	logrus.WithField("publisherType", pub.GetName()).Info("Publisher initialized")
+	return pub, nil
 }
 
 func setLogLevel(level string) {
