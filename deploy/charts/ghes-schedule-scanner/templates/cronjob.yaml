@@ -35,11 +35,11 @@ spec:
                 configMapKeyRef:
                   name: {{ .Chart.Name }}-config
                   key: GITHUB_BASE_URL
-            - name: GITHUB_ORGANIZATION
+            - name: GITHUB_ORG
               valueFrom:
                 configMapKeyRef:
                   name: {{ .Chart.Name }}-config
-                  key: GITHUB_ORGANIZATION
+                  key: GITHUB_ORG
             - name: LOG_LEVEL
               valueFrom:
                 configMapKeyRef:
@@ -60,7 +60,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.secretName }}
                   key: GITHUB_TOKEN
-            - name: SLACK_BOT_TOKEN
+            - name: SLACK_TOKEN
               valueFrom:
                 configMapKeyRef:
                   name: {{ .Chart.Name }}-config
