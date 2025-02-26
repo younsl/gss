@@ -38,9 +38,6 @@ type Config struct {
 	// ConcurrentScans is the maximum number of concurrent repository scans
 	ConcurrentScans int
 
-	// PublisherType is the type of publisher to use
-	PublisherType string
-
 	// ConnectivityMaxRetries is the maximum number of retry attempts for connectivity check
 	ConnectivityMaxRetries int
 
