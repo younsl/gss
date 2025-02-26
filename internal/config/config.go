@@ -38,6 +38,9 @@ type Config struct {
 	// ConcurrentScans is the maximum number of concurrent repository scans
 	ConcurrentScans int
 
+	// PublisherType is the type of publisher to use
+	PublisherType string
+
 	// ConnectivityMaxRetries is the maximum number of retry attempts for connectivity check
 	ConnectivityMaxRetries int
 
@@ -91,11 +94,6 @@ func LoadConfig() (*Config, error) {
 		"connectivityRetryInterval": cfg.ConnectivityRetryInterval,
 		"connectivityTimeout":       cfg.ConnectivityTimeout,
 	}).Debug("Configuration loaded")
-
-	// Connectivity check configuration
-	cfg.ConnectivityMaxRetries = getIntEnvWithDefault("CONNECTIVITY_MAX_RETRIES", 3)
-	cfg.ConnectivityRetryInterval = getIntEnvWithDefault("CONNECTIVITY_RETRY_INTERVAL", 5)
-	cfg.ConnectivityTimeout = getIntEnvWithDefault("CONNECTIVITY_TIMEOUT", 5)
 
 	return cfg, nil
 }
