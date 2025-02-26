@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 	"github.com/younsl/ghes-schedule-scanner/internal/config"
+	"github.com/younsl/ghes-schedule-scanner/pkg/canvas"
 	"github.com/younsl/ghes-schedule-scanner/pkg/connectivity"
 	"github.com/younsl/ghes-schedule-scanner/pkg/publisher"
 	"github.com/younsl/ghes-schedule-scanner/pkg/reporter"
