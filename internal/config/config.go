@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Config struct {
@@ -35,6 +37,18 @@ type Config struct {
 
 	// ConcurrentScans is the maximum number of concurrent repository scans
 	ConcurrentScans int
+
+	// PublisherType is the type of publisher to use
+	PublisherType string
+
+	// ConnectivityMaxRetries is the maximum number of retry attempts for connectivity check
+	ConnectivityMaxRetries int
+
+	// ConnectivityRetryInterval is the duration to wait between retries in seconds for connectivity check
+	ConnectivityRetryInterval int
+
+	// ConnectivityTimeout is the timeout for each connection attempt in seconds for connectivity check
+	ConnectivityTimeout int
 }
 
 func LoadConfig() (*Config, error) {
@@ -42,9 +56,9 @@ func LoadConfig() (*Config, error) {
 
 	// Required environment variables
 	requiredVars := map[string]*string{
-		"GITHUB_TOKEN":        &cfg.GitHubToken,
-		"GITHUB_ORGANIZATION": &cfg.GitHubOrganization,
-		"GITHUB_BASE_URL":     &cfg.GitHubBaseURL,
+		"GITHUB_TOKEN":    &cfg.GitHubToken,
+		"GITHUB_ORG":      &cfg.GitHubOrganization,
+		"GITHUB_BASE_URL": &cfg.GitHubBaseURL,
 	}
 
 	for envKey, configVar := range requiredVars {
@@ -56,9 +70,9 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// Optional environment variables
-	cfg.SlackBotToken = getEnvWithDefault("SLACK_BOT_TOKEN", "")
+	cfg.SlackBotToken = getEnvWithDefault("SLACK_TOKEN", "")
 	if cfg.SlackBotToken != "" && !strings.HasPrefix(cfg.SlackBotToken, "xoxb-") {
-		return nil, fmt.Errorf("SLACK_BOT_TOKEN must start with 'xoxb-'")
+		return nil, fmt.Errorf("SLACK_TOKEN must start with 'xoxb-'")
 	}
 
 	cfg.SlackChannelID = getEnvWithDefault("SLACK_CHANNEL_ID", "")
@@ -67,6 +81,19 @@ func LoadConfig() (*Config, error) {
 	cfg.LogLevel = getEnvWithDefault("LOG_LEVEL", "INFO")
 	cfg.RequestTimeout = getIntEnvWithDefault("REQUEST_TIMEOUT", 30)
 	cfg.ConcurrentScans = getIntEnvWithDefault("CONCURRENT_SCANS", 10)
+	cfg.PublisherType = getEnvWithDefault("PUBLISHER_TYPE", "console")
+
+	// Connectivity check configuration
+	cfg.ConnectivityMaxRetries = getIntEnvWithDefault("CONNECTIVITY_MAX_RETRIES", 3)
+	cfg.ConnectivityRetryInterval = getIntEnvWithDefault("CONNECTIVITY_RETRY_INTERVAL", 5)
+	cfg.ConnectivityTimeout = getIntEnvWithDefault("CONNECTIVITY_TIMEOUT", 5)
+
+	logrus.WithFields(logrus.Fields{
+		"publisherType":             cfg.PublisherType,
+		"connectivityMaxRetries":    cfg.ConnectivityMaxRetries,
+		"connectivityRetryInterval": cfg.ConnectivityRetryInterval,
+		"connectivityTimeout":       cfg.ConnectivityTimeout,
+	}).Debug("Configuration loaded")
 
 	return cfg, nil
 }

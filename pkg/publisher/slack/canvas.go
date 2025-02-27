@@ -1,4 +1,4 @@
-package canvas
+package slack
 
 import (
 	"bytes"
@@ -377,4 +377,8 @@ func atoi(s string) int {
 		return 0
 	}
 	return i
+}
+
+func (c *CanvasPublisher) GetName() string {
+	return "slack-canvas"
 }

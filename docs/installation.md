@@ -18,15 +18,16 @@ For local development and testing, you'll need to set up the following environme
 ```bash
 # Required environment variables
 export GITHUB_TOKEN="ghp_token"              # GitHub Personal Access Token with repo:* scope
-export GITHUB_ORGANIZATION="your_org"        # Your GitHub organization name
+export GITHUB_ORG="your_org"        # Your GitHub organization name
 export GITHUB_BASE_URL="https://your-ghes-domain"  # Your GitHub Enterprise Server URL
 
 # Optional environment variables
 export LOG_LEVEL="INFO"                      # Log level (default: INFO)
+export REQUEST_TIMEOUT="30"                  # Default timeout in seconds
 export REQUEST_TIMEOUT="30"                  # Request timeout in seconds (default: 30)
 
 # Optional Slack integration
-export SLACK_BOT_TOKEN="xoxb-token"         # Slack Bot Token
+export SLACK_TOKEN="xoxb-token"             # Slack Bot Token
 export SLACK_CHANNEL_ID="F01234ABCD"        # Slack Channel ID
 export SLACK_CANVAS_ID="C01234ABCD"         # Slack Canvas ID
 ```
@@ -62,11 +63,11 @@ Example configMap in values.yaml:
 # hack/charts/ghes-schedule-scanner/values.yaml
 configMap:
   data:
-    GITHUB_ORGANIZATION: "your-org"
+    GITHUB_ORG: "your-org"
     GITHUB_BASE_URL: "https://your-ghes-domain"
     LOG_LEVEL: "INFO"
     REQUEST_TIMEOUT: "30"
-    SLACK_BOT_TOKEN: "xoxb-your-token"
+    SLACK_TOKEN: "xoxb-your-token"
     SLACK_CHANNEL_ID: "F01234ABCD"
     SLACK_CANVAS_ID: "C01234ABCD"
 ```

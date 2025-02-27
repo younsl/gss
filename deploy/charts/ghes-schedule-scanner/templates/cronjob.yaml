@@ -35,11 +35,11 @@ spec:
                 configMapKeyRef:
                   name: {{ .Chart.Name }}-config
                   key: GITHUB_BASE_URL
-            - name: GITHUB_ORGANIZATION
+            - name: GITHUB_ORG
               valueFrom:
                 configMapKeyRef:
                   name: {{ .Chart.Name }}-config
-                  key: GITHUB_ORGANIZATION
+                  key: GITHUB_ORG
             - name: LOG_LEVEL
               valueFrom:
                 configMapKeyRef:
@@ -60,11 +60,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.secretName }}
                   key: GITHUB_TOKEN
-            - name: SLACK_BOT_TOKEN
+            - name: SLACK_TOKEN
               valueFrom:
                 configMapKeyRef:
                   name: {{ .Chart.Name }}-config
-                  key: SLACK_BOT_TOKEN
+                  key: SLACK_TOKEN
             - name: SLACK_CHANNEL_ID
               valueFrom:
                 configMapKeyRef:
@@ -75,6 +75,11 @@ spec:
                 configMapKeyRef:
                   name: {{ .Chart.Name }}-config
                   key: SLACK_CANVAS_ID
+            - name: PUBLISHER_TYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Chart.Name }}-config
+                  key: PUBLISHER_TYPE
             resources:
               limits:
                 cpu: {{ .Values.resources.limits.cpu }}
