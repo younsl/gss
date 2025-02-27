@@ -50,7 +50,7 @@ configMap:
   data:
     # -- GitHub Enterprise organization name
     # Organization name is used to scan all repositories for the given organization
-    GITHUB_ORGANIZATION: "example-org"
+    GITHUB_ORG: "example-org"
 
     # -- GitHub Enterprise base URL
     # The API endpoint will be automatically appended with '/api/v3'
@@ -78,7 +78,7 @@ configMap:
     # 1. Go to https://api.slack.com/apps
     # 2. Select your app > "OAuth & Permissions"
     # 3. Copy "Bot User OAuth Token" starting with `xoxb-`
-    SLACK_BOT_TOKEN: null
+    SLACK_TOKEN: null
 
     # -- Slack Channel ID to create a canvas page in Slack channel
     # How to get:
@@ -94,6 +94,10 @@ configMap:
     # 1. Copy the last part from Canvas URL you want to update
     # Canvas URL format: https://workspace.slack.com/docs/CHANNEL_ID/CANVAS_ID
     SLACK_CANVAS_ID: null
+
+    # -- Publisher type to use (Available values: console, slack-canvas)
+    # This value determines which publisher will be used to output scan results
+    PUBLISHER_TYPE: "slack-canvas"
 
 # -- Name of the secret containing sensitive data
 # This secret is used to store the GitHub access token with permissions

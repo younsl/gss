@@ -4,6 +4,10 @@
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/younsl/ghes-schedule-scanner)
 ![License](https://img.shields.io/github/license/younsl/ghes-schedule-scanner)
 
+<p align="center">
+  <img src="./docs/assets/images/4.png" alt="Logo" width="300px">
+</p>
+
 A Kubernetes add-on for DevOps and SRE teams to monitor and analyze CI/CD workflows in GitHub Enterprise Server. GSS runs as a kubernetes [cronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/) that scans and analyzes scheduled workflows across your GHES environment.
 
 ![System Architecture](./docs/assets/images/1.png)
@@ -43,6 +47,7 @@ NO  REPOSITORY                          WORKFLOW                            UTC 
 ### Slack Canvas Output
 
 ![Slack Canvas Output](./docs/assets/images/2.png)
+
 ![Slack Canvas Output](./docs/assets/images/3.png)
 
 ## 🔧 Installation

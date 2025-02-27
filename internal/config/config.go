@@ -56,9 +56,9 @@ func LoadConfig() (*Config, error) {
 
 	// Required environment variables
 	requiredVars := map[string]*string{
-		"GITHUB_TOKEN":        &cfg.GitHubToken,
-		"GITHUB_ORGANIZATION": &cfg.GitHubOrganization,
-		"GITHUB_BASE_URL":     &cfg.GitHubBaseURL,
+		"GITHUB_TOKEN":    &cfg.GitHubToken,
+		"GITHUB_ORG":      &cfg.GitHubOrganization,
+		"GITHUB_BASE_URL": &cfg.GitHubBaseURL,
 	}
 
 	for envKey, configVar := range requiredVars {
@@ -70,9 +70,9 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// Optional environment variables
-	cfg.SlackBotToken = getEnvWithDefault("SLACK_BOT_TOKEN", "")
+	cfg.SlackBotToken = getEnvWithDefault("SLACK_TOKEN", "")
 	if cfg.SlackBotToken != "" && !strings.HasPrefix(cfg.SlackBotToken, "xoxb-") {
-		return nil, fmt.Errorf("SLACK_BOT_TOKEN must start with 'xoxb-'")
+		return nil, fmt.Errorf("SLACK_TOKEN must start with 'xoxb-'")
 	}
 
 	cfg.SlackChannelID = getEnvWithDefault("SLACK_CHANNEL_ID", "")
