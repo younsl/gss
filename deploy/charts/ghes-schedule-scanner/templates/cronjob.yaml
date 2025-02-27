@@ -64,7 +64,7 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: {{ .Chart.Name }}-config
-                  key: SLACK_BOT_TOKEN
+                  key: SLACK_TOKEN
             - name: SLACK_CHANNEL_ID
               valueFrom:
                 configMapKeyRef:
