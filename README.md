@@ -37,11 +37,11 @@ The scanner is designed for high performance with parallel scanning capabilities
 
 ### Console Output
 
-```
+```bash
 Scheduled Workflows Summary:
-NO  REPOSITORY                          WORKFLOW                            UTC SCHEDULE  KST SCHEDULE  LAST COMMITTER  LAST STATUS
-1   api-test-server                     api unit test                       0 15 * * *    0 0 * * *     younsl        completed
-2   daily-batch                       daily batch service                   0 * * * *     0 9 * * *     ddukbg        completed
+NO  REPOSITORY                        WORKFLOW                            UTC SCHEDULE  KST SCHEDULE  LAST COMMITTER  LAST STATUS
+1   api-test-server                   api unit test                       0 15 * * *    0 0 * * *     younsl          completed
+2   daily-batch                       daily batch service                 0 * * * *     0 9 * * *     ddukbg          completed
 ```
 
 ### Slack Canvas Output
@@ -56,24 +56,27 @@ NO  REPOSITORY                          WORKFLOW                            UTC 
 
 - Kubernetes cluster (1.19+)
 - Helm v3.0.0+
-- GitHub Personal Access Token with `repo:*` scope
-- Slack Bot Token (for Slack Canvas publishing)
+- **GitHub Personal Access Token** with `repo:*` scope to scan scheduled workflows in all repositories
+- **Slack Bot Token** to publish scan results to Slack Canvas page
 
 ### Quick Start
 
 1. Create a namespace for GSS:
+
 ```bash
 kubectl create namespace gss
 ```
 
 2. Create a Kubernetes secret with your GitHub token:
+
 ```bash
 kubectl create secret generic ghes-schedule-scanner-secret \
     --namespace gss \
     --from-literal GITHUB_TOKEN=ghp_<YOUR_TOKEN>
 ```
 
-3. Install using Helm:
+3. Install GSS using [helm chart](./deploy/charts/ghes-schedule-scanner):
+
 ```bash
 helm upgrade \
     --install \
@@ -82,6 +85,13 @@ helm upgrade \
     --create-namespace \
     ghes-schedule-scanner . \
     --wait
+```
+
+4. Verify chart installation:
+
+```bash
+helm list -n gss
+kubectl get cronjob -n gss
 ```
 
 For detailed installation instructions, see the [Installation Guide](./docs/installation.md).
@@ -99,31 +109,32 @@ Outputs scan results to the console/logs. This is the default publisher.
 Publishes scan results to a Slack Canvas, providing a rich, interactive view of your scheduled workflows.
 
 Required environment variables:
-- `SLACK_BOT_TOKEN`: Slack Bot Token (starts with `xoxb-`)
+
+- `SLACK_TOKEN`: Slack Bot Token (must start with `xoxb-`)
 - `SLACK_CHANNEL_ID`: Slack Channel ID
 - `SLACK_CANVAS_ID`: Slack Canvas ID
 
 ## 🛠️ Local Development
 
-Set up environment variables:
+Set environment variables needed for local development:
 
 ```bash
 # Required
 export GITHUB_TOKEN="ghp_token"
-export GITHUB_ORGANIZATION="your_org"
+export GITHUB_ORG="your_organization"
 export GITHUB_BASE_URL="https://your-ghes-domain"
 
 # Optional
 export LOG_LEVEL="INFO"
-export PUBLISHER_TYPE="console"  # or "slack-canvas"
+export PUBLISHER_TYPE="console" # Available values: `console`, `slack-canvas`
 
 # For Slack Canvas
-export SLACK_BOT_TOKEN="xoxb-token"
+export SLACK_TOKEN="xoxb-token"
 export SLACK_CHANNEL_ID="F01234ABCD"
 export SLACK_CANVAS_ID="C01234ABCD"
 ```
 
-Run locally:
+After setting up environment variables, run the application locally:
 
 ```bash
 go run cmd/ghes-schedule-scanner/main.go
