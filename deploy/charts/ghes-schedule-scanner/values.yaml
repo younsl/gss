@@ -35,6 +35,13 @@ successfulJobsHistoryLimit: 3
 # This value is used to limit the number of failed jobs
 failedJobsHistoryLimit: 1
 
+# -- DNS config for the CronJob
+# This value is used to configure the DNS settings for the CronJob.
+dnsConfig: {}
+  # options:
+  #   - name: ndots
+  #     value: "2"
+
 # -- CronJob annotations
 # annotations are used to configure additional CronJob settings
 annotations: {}
