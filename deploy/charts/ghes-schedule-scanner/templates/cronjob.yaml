@@ -25,6 +25,21 @@ spec:
           labels:
             {{- include "ghes-schedule-scanner.labels" . | nindent 12 }}
         spec:
+          {{- if .Values.dnsConfig }}
+          dnsConfig:
+            {{- with .Values.dnsConfig.nameservers }}
+            nameservers:
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.dnsConfig.searches }}
+            searches:
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.dnsConfig.options }}
+            options:
+              {{- toYaml .Values.dnsConfig.options | nindent 12 }}
+            {{- end }}
+          {{- end }}
           containers:
           - name: {{ .Chart.Name }}
             image: "{{ .Values.image.repository }}:{{ include "ghes-schedule-scanner.imageTag" . }}"
