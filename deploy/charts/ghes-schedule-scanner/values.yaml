@@ -1,3 +1,8 @@
+# -- Override the chart name
+nameOverride: ""
+# -- Override the full name template
+fullnameOverride: ""
+
 # -- Container image configuration
 image:
   # -- Container image repository
@@ -35,9 +40,9 @@ successfulJobsHistoryLimit: 3
 # This value is used to limit the number of failed jobs
 failedJobsHistoryLimit: 1
 
-# -- DNS config for the CronJob
-# This value is used to configure the DNS settings for the CronJob.
+# -- DNS config for the CronJob pod
 dnsConfig: {}
+  # Example:
   # options:
   #   - name: ndots
   #     value: "2"
@@ -160,3 +165,11 @@ topologySpreadConstraints: []
 #   labelSelector:
 #     matchLabels:
 #       app.kubernetes.io/name: ghes-schedule-scanner
+
+# -- List of repositories to exclude from the scan, one per line.
+# Example:
+# excludedRepositories: |-
+#   my-org/internal-repo
+#   my-org/test-project
+#   archive/old-stuff
+excludedRepositories: ""
