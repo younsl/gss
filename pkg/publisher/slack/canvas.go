@@ -244,15 +244,17 @@ func (c *CanvasPublisher) createCanvasBlocks(result *models.ScanResult) []slack.
 			slack.NewTextBlockObject("mrkdwn",
 				fmt.Sprintf("📊 *Scan Summary*\n"+
 					"• Total Repositories: %d\n"+
-					"• Scheduled Workflows: %d\n"+
+					"• Excluded Repositories: %d\n"+
+					"• Scheduled Workflows Found: %d\n"+
 					"• Unknown Committers: %d\n\n"+
 					"*Last Updated:* %s by GHES Schedule Scanner",
 					result.TotalRepos,
+					result.ExcludedReposCount,
 					len(result.Workflows),
 					unknownCommitters,
-					time.Now().Format(time.RFC3339),
-				),
-				false, false,
+					time.Now().Format("2006-01-02 15:04:05 MST")),
+				false,
+				false,
 			),
 			nil, nil,
 		),

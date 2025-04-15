@@ -16,6 +16,7 @@ type WorkflowInfo struct {
 type ScanResult struct {
 	Workflows          []WorkflowInfo
 	TotalRepos         int
+	ExcludedReposCount int
 	ScanDuration       time.Duration
 	MaxConcurrentScans int32
 }
