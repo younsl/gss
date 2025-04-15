@@ -7,7 +7,7 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
 
 env:
-  IMAGE_NAME: younsl/gss
+  IMAGE_NAME: containerelic/gss
 
 permissions:
   contents: read
