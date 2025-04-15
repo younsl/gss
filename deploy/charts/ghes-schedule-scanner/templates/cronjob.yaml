@@ -27,7 +27,7 @@ spec:
         spec:
           {{- if .Values.dnsConfig }}
           dnsConfig:
-            {{- toYaml .Values.dnsConfig | nindent 10 }}
+            {{- toYaml .Values.dnsConfig | nindent 12 }}
           {{- end }}
           containers:
           - name: {{ .Chart.Name }}

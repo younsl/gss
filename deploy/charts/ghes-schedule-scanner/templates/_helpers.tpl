@@ -51,13 +51,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{/* 
-Generates resource name in format "{chart-name}-{release-name}"
-*/}}
-{{- define "ghes-schedule-scanner.name" -}}
-{{- printf "%s-%s" .Chart.Name .Release.Name -}}
-{{- end -}}
-
-{{/* 
 Sets container image tag (uses .Chart.AppVersion if .Values.image.tag is not defined)
 */}}
 {{- define "ghes-schedule-scanner.imageTag" -}}
