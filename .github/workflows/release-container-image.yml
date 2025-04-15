@@ -7,7 +7,7 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
 
 env:
-  IMAGE_NAME: younsl/gss
+  IMAGE_NAME: containerelic/gss
 
 permissions:
   contents: read
@@ -73,7 +73,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: younsl
+          username: containerelic
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push

@@ -1,8 +1,13 @@
+# -- Override the chart name
+nameOverride: ""
+# -- Override the full name template
+fullnameOverride: ""
+
 # -- Container image configuration
 image:
   # -- Container image repository
   # This value is used to specify the container image repository.
-  repository: ghcr.io/younsl/ghes-schedule-scanner
+  repository: ghcr.io/containerelic/gss
   # -- Image pull policy (Available values: Always, IfNotPresent, Never)
   pullPolicy: IfNotPresent
   # -- Container image tag (If not set, will use Chart's appVersion by default.)
@@ -35,9 +40,9 @@ successfulJobsHistoryLimit: 3
 # This value is used to limit the number of failed jobs
 failedJobsHistoryLimit: 1
 
-# -- DNS config for the CronJob
-# This value is used to configure the DNS settings for the CronJob.
+# -- DNS config for the CronJob pod
 dnsConfig: {}
+  # Example:
   # options:
   #   - name: ndots
   #     value: "2"
@@ -160,3 +165,10 @@ topologySpreadConstraints: []
 #   labelSelector:
 #     matchLabels:
 #       app.kubernetes.io/name: ghes-schedule-scanner
+
+# -- List of repositories to exclude from the scan
+# Note: Please exclude the organization name, only the repository name.
+excludedRepositoriesList: []
+  # - infra-repo
+  # - important-repo
+  # - another-repo

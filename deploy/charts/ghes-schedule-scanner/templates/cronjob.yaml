@@ -27,18 +27,7 @@ spec:
         spec:
           {{- if .Values.dnsConfig }}
           dnsConfig:
-            {{- with .Values.dnsConfig.nameservers }}
-            nameservers:
-              {{- toYaml . | nindent 12 }}
-            {{- end }}
-            {{- with .Values.dnsConfig.searches }}
-            searches:
-              {{- toYaml . | nindent 12 }}
-            {{- end }}
-            {{- if .Values.dnsConfig.options }}
-            options:
-              {{- toYaml .Values.dnsConfig.options | nindent 12 }}
-            {{- end }}
+            {{- toYaml .Values.dnsConfig | nindent 12 }}
           {{- end }}
           containers:
           - name: {{ .Chart.Name }}
@@ -48,27 +37,27 @@ spec:
             - name: GITHUB_BASE_URL
               valueFrom:
                 configMapKeyRef:
-                  name: {{ .Chart.Name }}-config
+                  name: {{ include "ghes-schedule-scanner.fullname" . }}
                   key: GITHUB_BASE_URL
             - name: GITHUB_ORG
               valueFrom:
                 configMapKeyRef:
-                  name: {{ .Chart.Name }}-config
+                  name: {{ include "ghes-schedule-scanner.fullname" . }}
                   key: GITHUB_ORG
             - name: LOG_LEVEL
               valueFrom:
                 configMapKeyRef:
-                  name: {{ .Chart.Name }}-config
+                  name: {{ include "ghes-schedule-scanner.fullname" . }}
                   key: LOG_LEVEL
             - name: REQUEST_TIMEOUT
               valueFrom:
                 configMapKeyRef:
-                  name: {{ .Chart.Name }}-config
+                  name: {{ include "ghes-schedule-scanner.fullname" . }}
                   key: REQUEST_TIMEOUT
             - name: CONCURRENT_SCANS
               valueFrom:
                 configMapKeyRef:
-                  name: {{ .Chart.Name }}-config
+                  name: {{ include "ghes-schedule-scanner.fullname" . }}
                   key: CONCURRENT_SCANS
             - name: GITHUB_TOKEN
               valueFrom:
@@ -78,22 +67,22 @@ spec:
             - name: SLACK_TOKEN
               valueFrom:
                 configMapKeyRef:
-                  name: {{ .Chart.Name }}-config
+                  name: {{ include "ghes-schedule-scanner.fullname" . }}
                   key: SLACK_TOKEN
             - name: SLACK_CHANNEL_ID
               valueFrom:
                 configMapKeyRef:
-                  name: {{ .Chart.Name }}-config
+                  name: {{ include "ghes-schedule-scanner.fullname" . }}
                   key: SLACK_CHANNEL_ID
             - name: SLACK_CANVAS_ID
               valueFrom:
                 configMapKeyRef:
-                  name: {{ .Chart.Name }}-config
+                  name: {{ include "ghes-schedule-scanner.fullname" . }}
                   key: SLACK_CANVAS_ID
             - name: PUBLISHER_TYPE
               valueFrom:
                 configMapKeyRef:
-                  name: {{ .Chart.Name }}-config
+                  name: {{ include "ghes-schedule-scanner.fullname" . }}
                   key: PUBLISHER_TYPE
             resources:
               limits:
@@ -102,6 +91,12 @@ spec:
               requests:
                 cpu: {{ .Values.resources.requests.cpu }}
                 memory: {{ .Values.resources.requests.memory }}
+            volumeMounts:
+              - name: config-volume
+                mountPath: /app/config
+              - name: exclude-config-volume
+                mountPath: /etc/gss
+                readOnly: true
           restartPolicy: {{ .Values.restartPolicy }}
           {{- with .Values.nodeSelector }}
           nodeSelector:
@@ -119,3 +114,13 @@ spec:
           topologySpreadConstraints:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          volumes:
+            - name: config-volume
+              configMap:
+                name: {{ include "ghes-schedule-scanner.fullname" . }}
+            - name: exclude-config-volume
+              configMap:
+                name: {{ include "ghes-schedule-scanner.fullname" . }}-exclude
+                items:
+                - key: exclude-repos.txt
+                  path: exclude-repos.txt
