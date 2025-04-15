@@ -77,8 +77,9 @@ func (f *ConsoleFormatter) FormatReport(result *models.ScanResult) string {
 		}
 	}
 
-	sb.WriteString(fmt.Sprintf("\nScanned: %d repos, %d workflows\n",
+	sb.WriteString(fmt.Sprintf("\nTotal Repositories: %d | Excluded Repositories: %d | Scheduled Workflows Found: %d\n",
 		result.TotalRepos,
+		result.ExcludedReposCount,
 		len(result.Workflows)))
 	return sb.String()
 }

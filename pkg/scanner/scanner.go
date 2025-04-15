@@ -76,6 +76,7 @@ func (s *Scanner) ScanScheduledWorkflows(org string) (*models.ScanResult, error)
 	maxRoutines := int32(0)
 	activeRoutines := int32(0)
 	totalRepos := 0
+	excludedCount := 0
 
 	logrus.WithFields(logrus.Fields{
 		"organization":  org,
@@ -115,6 +116,7 @@ func (s *Scanner) ScanScheduledWorkflows(org string) (*models.ScanResult, error)
 		for _, repo := range repos {
 			if _, ok := s.excludedRepos[*repo.Name]; ok {
 				logrus.WithField("repository", *repo.Name).Info("Skipping excluded repository")
+				excludedCount++
 				continue
 			}
 
@@ -184,6 +186,7 @@ func (s *Scanner) ScanScheduledWorkflows(org string) (*models.ScanResult, error)
 	return &models.ScanResult{
 		Workflows:          results,
 		TotalRepos:         totalRepos,
+		ExcludedReposCount: excludedCount,
 		ScanDuration:       duration,
 		MaxConcurrentScans: atomic.LoadInt32(&maxRoutines),
 	}, nil
