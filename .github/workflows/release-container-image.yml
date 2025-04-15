@@ -73,7 +73,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: younsl
+          username: containerelic
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
