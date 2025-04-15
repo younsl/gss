@@ -10,4 +10,6 @@ metadata:
   {{- end }}
 data:
   exclude-repos.txt: |-
-    {{ .Values.excludedRepositories | default "" | nindent 4 }}
+    {{- range .Values.excludedRepositoriesList }}
+    {{ . | indent 4 }}
+    {{- end }}
