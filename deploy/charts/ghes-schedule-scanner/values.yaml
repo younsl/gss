@@ -166,10 +166,9 @@ topologySpreadConstraints: []
 #     matchLabels:
 #       app.kubernetes.io/name: ghes-schedule-scanner
 
-# -- List of repositories to exclude from the scan, one per line.
-# Example:
-# excludedRepositories: |-
-#   my-org/internal-repo
-#   my-org/test-project
-#   archive/old-stuff
-excludedRepositories: ""
+# -- List of repositories to exclude from the scan
+# Note: Please exclude the organization name, only the repository name.
+excludedRepositoriesList: []
+  # - infra-repo
+  # - important-repo
+  # - another-repo
