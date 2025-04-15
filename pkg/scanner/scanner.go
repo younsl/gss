@@ -3,7 +3,10 @@ package scanner
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -26,17 +29,42 @@ type GitHubClient interface {
 	GetUser(ctx context.Context, username string) (*github.User, *github.Response, error)
 }
 
-// Scanner는 GitHub 워크플로우를 스캔하는 구조체입니다
 type Scanner struct {
-	client          GitHubClient // 인터페이스로 변경
+	client          GitHubClient
 	concurrentScans int
+	excludedRepos   map[string]struct{}
 }
 
 // NewScanner는 새로운 Scanner 인스턴스를 생성합니다
 func NewScanner(client GitHubClient, concurrentScans int) *Scanner {
+	excludedMap := make(map[string]struct{})
+	configFilePath := "/etc/gss/exclude-repos.txt"
+
+	if _, err := os.Stat(configFilePath); err == nil {
+		content, err := ioutil.ReadFile(configFilePath)
+		if err != nil {
+			logrus.WithError(err).Warnf("Failed to read exclude config file: %s", configFilePath)
+		} else {
+			repoNames := strings.Split(string(content), "\n")
+			for _, name := range repoNames {
+				trimmedName := strings.TrimSpace(name)
+				if trimmedName != "" {
+					excludedMap[trimmedName] = struct{}{}
+					logrus.WithFields(logrus.Fields{
+						"repository": trimmedName,
+						"source":     "file",
+					}).Info("Will exclude repository from scan")
+				}
+			}
+		}
+	} else if !os.IsNotExist(err) {
+		logrus.WithError(err).Warnf("Error checking exclude config file: %s", configFilePath)
+	}
+
 	return &Scanner{
 		client:          client,
 		concurrentScans: concurrentScans,
+		excludedRepos:   excludedMap,
 	}
 }
 
@@ -85,6 +113,11 @@ func (s *Scanner) ScanScheduledWorkflows(org string) (*models.ScanResult, error)
 		semaphore := make(chan struct{}, s.concurrentScans)
 
 		for _, repo := range repos {
+			if _, ok := s.excludedRepos[*repo.Name]; ok {
+				logrus.WithField("repository", *repo.Name).Info("Skipping excluded repository")
+				continue
+			}
+
 			wg.Add(1)
 			semaphore <- struct{}{}
 
