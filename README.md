@@ -1,18 +1,17 @@
 # GHES Schedule Scanner (GSS)
 
-![GitHub Go](https://img.shields.io/badge/go-1.21+-00ADD8?logo=go)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/younsl/ghes-schedule-scanner)
-![License](https://img.shields.io/github/license/younsl/ghes-schedule-scanner)
+[![Go Version](https://img.shields.io/badge/go-1.21+-000000?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
+[![GitHub release](https://img.shields.io/github/v/release/containerelic/gss?style=flat-square&color=black&logo=github&logoColor=white&label=release)](https://github.com/containerelic/gss/releases)
+[![License](https://img.shields.io/github/license/containerelic/gss?style=flat-square&color=black&logo=github&logoColor=white)](https://github.com/containerelic/gss/blob/main/LICENSE)
+[![CodeQL Scan](https://img.shields.io/github/actions/workflow/status/containerelic/gss/codeql.yml?branch=main&style=flat-square&label=CodeQL&logo=githubactions&logoColor=white&color=black)](https://github.com/containerelic/gss/actions/workflows/codeql.yml)
 
-<p align="center">
-  <img src="./docs/assets/images/4.png" alt="Logo" width="300px">
-</p>
+> *GSS stands for GHES(GitHub Enterprise Server) Schedule Scanner.*
 
-A Kubernetes add-on for DevOps and SRE teams to monitor and analyze CI/CD workflows in GitHub Enterprise Server. GSS runs as a kubernetes [cronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/) that scans and analyzes scheduled workflows across your GHES environment.
+GSS is a Kubernetes add-on for DevOps and SRE teams to monitor and analyze CI/CD workflows in [GitHub Enterprise Server](https://docs.github.com/ko/enterprise-server/admin/all-releases). GSS runs as a kubernetes [cronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/) that scans and analyzes scheduled workflows across your GHES environment.
 
 ![System Architecture](./docs/assets/images/1.png)
 
-## 🚀 Overview
+## Overview
 
 GHES Schedule Scanner runs as a kubernetes cronJob that periodically scans GitHub Enterprise Server repositories for scheduled workflows. It collects information about:
 
@@ -23,7 +22,7 @@ GHES Schedule Scanner runs as a kubernetes cronJob that periodically scans GitHu
 
 The scanner is designed for high performance with parallel scanning capabilities using Go routines and provides timezone conversion between UTC and KST for better schedule visibility.
 
-## ✨ Features
+## Features
 
 - **GitHub Enterprise Server Integration**: Compatible with self-hosted [GitHub Enterprise Server (3.11+)](https://docs.github.com/ko/enterprise-server/admin/all-releases)
 - **Organization-wide Scanning**: Scan scheduled workflows across all repositories in an organization
@@ -33,7 +32,7 @@ The scanner is designed for high performance with parallel scanning capabilities
 - **Multiple Publishers**: Publish results to console or Slack Canvas
 - **Kubernetes Native**: Runs as a Kubernetes cronJob for periodic scanning
 
-## 📊 Output Examples
+## Output Examples
 
 ### Console Output
 
@@ -50,55 +49,12 @@ NO  REPOSITORY                        WORKFLOW                            UTC SC
 
 ![Slack Canvas Output](./docs/assets/images/3.png)
 
-## 🔧 Installation
-
-### Prerequisites
-
-- Kubernetes cluster (1.19+)
-- Helm v3.0.0+
-- **GitHub Personal Access Token** with `repo:*` scope to scan scheduled workflows in all repositories
-- **Slack Bot Token** to publish scan results to Slack Canvas page
-
-### Quick Start
-
-1. Create a namespace for GSS:
-
-```bash
-kubectl create namespace gss
-```
-
-2. Create a Kubernetes secret with your GitHub token:
-
-```bash
-kubectl create secret generic ghes-schedule-scanner-secret \
-    --namespace gss \
-    --from-literal GITHUB_TOKEN=ghp_<YOUR_TOKEN>
-```
-
-3. Install GSS using [helm chart](./deploy/charts/ghes-schedule-scanner):
-
-```bash
-helm upgrade \
-    --install \
-    --values values.yaml \
-    --namespace gss \
-    --create-namespace \
-    ghes-schedule-scanner . \
-    --wait
-```
-
-4. Verify chart installation:
-
-```bash
-helm list -n gss
-kubectl get cronjob -n gss
-```
-
-For detailed installation instructions, see the [Installation Guide](./docs/installation.md).
-
-## 🔄 Publishers
+## Publishers
 
 GSS supports multiple publishers to display scan results:
+
+- Console (Pod logs): `console`
+- Slack Canvas: `slack-canvas`
 
 ### Console Publisher
 
@@ -114,7 +70,7 @@ Required environment variables:
 - `SLACK_CHANNEL_ID`: Slack Channel ID
 - `SLACK_CANVAS_ID`: Slack Canvas ID
 
-## 🛠️ Local Development
+## Local Development
 
 Set environment variables needed for local development:
 
@@ -140,18 +96,15 @@ After setting up environment variables, run the application locally:
 go run cmd/ghes-schedule-scanner/main.go
 ```
 
-## 📚 Documentation
+## Documentation
+
+If you want to know more about GSS, please refer to the following documents:
 
 - [Installation Guide](./docs/installation.md)
 - [Roadmap](./docs/roadmap.md)
 - [Contributing Guidelines](./docs/contributing.md)
+- [Acknowledgements](./docs/acknowledgements.md)
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgements
-
-- [GitHub API](https://docs.github.com/en/rest)
-- [Slack API](https://api.slack.com/)
-- [Kubernetes CronJobs](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/)
