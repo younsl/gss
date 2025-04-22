@@ -76,6 +76,11 @@ jobs:
           username: containerelic
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set build date
+        id: build-date
+        run: |
+          echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_ENV
+
       - name: Build and push
         id: build-push
         uses: docker/build-push-action@v6
@@ -84,3 +89,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ghcr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          build-args: |
+            VERSION=${{ env.IMAGE_TAG }}
+            BUILD_DATE=${{ env.BUILD_DATE }}
+            COMMIT_HASH=${{ github.sha }}
