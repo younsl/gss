@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -44,6 +45,7 @@ var workflowStatusIcons = map[string]string{
 	"requested":   ":bell:",
 	"waiting":     ":clock3:",
 	"pending":     ":pause_button:",
+	"completed":   ":white_check_mark:",
 }
 
 type CanvasPublisher struct {
@@ -323,11 +325,12 @@ func (c *CanvasPublisher) createCanvasBlocks(result *models.ScanResult) []slack.
 
 func (c *CanvasPublisher) createWorkflowRow(wf models.WorkflowInfo, index int) slack.Block {
 	baseURL := strings.TrimSuffix(c.githubBaseURL, "/api/v3")
+	workflowFilenameBase := filepath.Base(wf.WorkflowFileName)
 	workflowURL := fmt.Sprintf("%s/%s/%s/actions/workflows/%s",
 		strings.TrimRight(baseURL, "/"),
 		c.organization,
 		wf.RepoName,
-		wf.WorkflowFileName,
+		workflowFilenameBase,
 	)
 
 	workflowLink := fmt.Sprintf("<%s|%s>", workflowURL, wf.WorkflowName)
