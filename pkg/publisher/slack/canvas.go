@@ -11,6 +11,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
+	"github.com/younsl/ghes-schedule-scanner/internal/version"
 	"github.com/younsl/ghes-schedule-scanner/pkg/models"
 )
 
@@ -72,58 +73,6 @@ func (c *CanvasPublisher) PublishScanResult(result *models.ScanResult) error {
 	}
 
 	logrus.WithField("canvasID", c.canvasID).Info("Successfully updated Canvas content")
-	return nil
-}
-
-func (c *CanvasPublisher) setCanvasAccess(canvasID string) error {
-	logrus.WithField("canvasID", canvasID).Debug("Setting Canvas access")
-	url := fmt.Sprintf("%s/canvases.access.set", strings.TrimRight(c.baseURL, "/"))
-
-	payload := map[string]interface{}{
-		"token":        c.apiToken,
-		"canvas_id":    canvasID,
-		"access_level": "write",
-		"channel_ids":  []string{c.channelID},
-	}
-
-	req, err := http.NewRequest("POST", url, jsonBody(payload))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+c.apiToken)
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{Timeout: 30 * time.Second}
-	logrus.WithField("channelID", c.channelID).Info("Sending request to set access for channel with write permission")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	logrus.WithField("response", string(body)).Info("Canvas access set API response")
-
-	var result struct {
-		Ok    bool   `json:"ok"`
-		Error string `json:"error"`
-	}
-
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("failed to decode response: %w, body: %s", err, string(body))
-	}
-
-	if !result.Ok {
-		return fmt.Errorf("failed to set canvas access: %s", result.Error)
-	}
-
-	logrus.WithField("channelID", c.channelID).Info("Successfully set Canvas access for channel")
 	return nil
 }
 
@@ -237,6 +186,9 @@ func (c *CanvasPublisher) createCanvasBlocks(result *models.ScanResult) []slack.
 		}
 	}
 
+	// Get build information
+	buildInfo := version.Get()
+
 	blocks := []slack.Block{
 		slack.NewHeaderBlock(slack.NewTextBlockObject("plain_text", "GHES Scheduled Workflows", false, false)),
 		slack.NewDividerBlock(),
@@ -253,8 +205,23 @@ func (c *CanvasPublisher) createCanvasBlocks(result *models.ScanResult) []slack.
 					len(result.Workflows),
 					unknownCommitters,
 					time.Now().Format("2006-01-02 15:04:05 MST")),
-				false,
-				false,
+				false, false,
+			),
+			nil, nil,
+		),
+		slack.NewDividerBlock(),
+		slack.NewSectionBlock(
+			slack.NewTextBlockObject("mrkdwn",
+				fmt.Sprintf("🛠️ *Build Information*\n"+
+					"• Version: `%s`\n"+
+					"• Git Commit: `%s`\n"+
+					"• Build Date: `%s`\n"+
+					"• Go Version: `%s`",
+					buildInfo.Version,
+					buildInfo.GitCommit,
+					buildInfo.BuildDate,
+					buildInfo.GoVersion),
+				false, false,
 			),
 			nil, nil,
 		),

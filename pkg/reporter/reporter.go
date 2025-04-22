@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/younsl/ghes-schedule-scanner/internal/version"
 	"github.com/younsl/ghes-schedule-scanner/pkg/models"
 )
 
@@ -58,7 +59,13 @@ func (f *ConsoleFormatter) FormatReport(result *models.ScanResult) string {
 		return "No workflows found\n"
 	}
 
+	buildInfo := version.Get()
+
 	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf("GSS Build: Version=%s, Commit=%s, Built=%s, Go=%s\n\n",
+		buildInfo.Version, buildInfo.GitCommit, buildInfo.BuildDate, buildInfo.GoVersion))
+
 	sb.WriteString("Scheduled Workflows Summary:\n")
 	sb.WriteString(fmt.Sprintf("%-3s %-35s %-35s %-13s %-13s %-15s %s\n",
 		"NO", "REPOSITORY", "WORKFLOW", "UTC SCHEDULE", "KST SCHEDULE", "LAST COMMITTER", "LAST STATUS"))
