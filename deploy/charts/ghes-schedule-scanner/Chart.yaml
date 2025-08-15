@@ -2,8 +2,8 @@ apiVersion: v2
 name: ghes-schedule-scanner
 description: A Helm chart for deploying the GHES Schedule Scanner
 type: application
-version: 0.4.1
-appVersion: 0.4.1
+version: 0.4.2
+appVersion: 0.4.2
 
 keywords:
   - github
