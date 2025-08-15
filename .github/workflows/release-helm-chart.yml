@@ -1,0 +1,105 @@
+name: Release Helm Chart
+run-name: 📦 Release Helm Chart to ghcr.io
+
+on:
+  push:
+    tags:
+      - 'charts/v[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  REGISTRY: ghcr.io
+  CHART_PATH: ./deploy/charts/ghes-schedule-scanner
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.14.0'
+
+      - name: Set up kind cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: kind
+          version: v0.20.0
+
+      - name: Lint Helm Chart
+        run: |
+          helm lint ${{ env.CHART_PATH }}
+
+      - name: Dry-run installation
+        run: |
+          helm install ghes-scanner ${{ env.CHART_PATH }} \
+            --dry-run \
+            --debug \
+            --namespace ghes-scanner \
+            --create-namespace
+
+      - name: Test installation
+        run: |
+          # Install the chart
+          helm install ghes-scanner ${{ env.CHART_PATH }} \
+            --namespace ghes-scanner \
+            --create-namespace \
+            --wait \
+            --timeout 5m
+          
+          # Verify deployment
+          kubectl get all -n ghes-scanner
+          
+          # Check if pods are running
+          kubectl wait --for=condition=ready pod \
+            -l app.kubernetes.io/name=ghes-schedule-scanner \
+            -n ghes-scanner \
+            --timeout=300s
+
+      - name: Run Helm tests
+        run: |
+          helm test ghes-scanner -n ghes-scanner
+
+      - name: Cleanup
+        if: always()
+        run: |
+          helm uninstall ghes-scanner -n ghes-scanner || true
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.14.0'
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package and Push Helm Chart
+        run: |
+          # Package the chart
+          helm package ${{ env.CHART_PATH }}
+          
+          # Get chart name and version from the packaged file
+          CHART_FILE=$(ls *.tgz)
+          
+          # Push to OCI registry with charts/ prefix for clear separation
+          # Chart: oci://ghcr.io/younsl/charts/ghes-schedule-scanner
+          # Image: ghcr.io/containerelic/gss
+          helm push ${CHART_FILE} oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
