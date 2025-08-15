@@ -15,5 +15,5 @@ repos:
     hooks:
       - id: helm-docs
         args:
-          - --chart-search-root=deploy/charts
+          - --chart-search-root=deploy/charts/ghes-schedule-scanner
           - --template-files=deploy/charts/ghes-schedule-scanner/ci/README.md.gotmpl
