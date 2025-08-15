@@ -10,3 +10,10 @@ repos:
       - id: go-fmt
       - id: go-test-mod
       - id: go-mod-tidy
+  - repo: https://github.com/norwoodj/helm-docs
+    rev: v1.11.0
+    hooks:
+      - id: helm-docs
+        args:
+          - --chart-search-root=deploy/charts
+          - --template-files=deploy/charts/ghes-schedule-scanner/ci/README.md.gotmpl
