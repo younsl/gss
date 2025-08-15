@@ -17,7 +17,7 @@ ARG LDFLAGS="-X 'github.com/younsl/ghes-schedule-scanner/internal/version.versio
 RUN echo "Building with LDFLAGS: ${LDFLAGS}" && \
     go build -ldflags="${LDFLAGS}" -o ghes-schedule-scanner ./cmd/ghes-schedule-scanner
 
-FROM alpine:3.21
+FROM alpine:3.22
 WORKDIR /app
 COPY --from=builder /app/ghes-schedule-scanner .
 
