@@ -46,28 +46,22 @@ jobs:
         run: |
           # Install the chart
           helm install ghes-scanner ${{ env.CHART_PATH }} \
-            --namespace ghes-scanner \
+            --namespace gss \
             --create-namespace \
             --wait \
-            --timeout 5m
+            --timeout 1m
           
           # Verify deployment
-          kubectl get all -n ghes-scanner
-          
-          # Check if pods are running
-          kubectl wait --for=condition=ready pod \
-            -l app.kubernetes.io/name=ghes-schedule-scanner \
-            -n ghes-scanner \
-            --timeout=300s
+          kubectl get all -n gss
 
       - name: Run Helm tests
         run: |
-          helm test ghes-scanner -n ghes-scanner
+          helm test ghes-scanner -n gss
 
       - name: Cleanup
         if: always()
         run: |
-          helm uninstall ghes-scanner -n ghes-scanner || true
+          helm uninstall ghes-scanner -n gss || true
 
   release:
     needs: test
