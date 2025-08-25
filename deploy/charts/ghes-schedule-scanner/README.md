@@ -1,6 +1,6 @@
 # ghes-schedule-scanner
 
-![Version: 0.4.2](https://img.shields.io/badge/Version-0.4.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.4.2](https://img.shields.io/badge/AppVersion-0.4.2-informational?style=flat-square)
+![Version: 0.5.0](https://img.shields.io/badge/Version-0.5.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.5.0](https://img.shields.io/badge/AppVersion-0.5.0-informational?style=flat-square)
 
 A Helm chart for deploying the GHES Schedule Scanner
 
@@ -20,13 +20,13 @@ A Helm chart for deploying the GHES Schedule Scanner
 Install the chart directly from OCI registry with the release name `ghes-schedule-scanner`:
 
 ```console
-helm install ghes-schedule-scanner oci://ghcr.io/younsl/charts/ghes-schedule-scanner --version 0.4.2
+helm install ghes-schedule-scanner oci://ghcr.io/younsl/charts/ghes-schedule-scanner --version 0.5.0
 ```
 
 Install with custom values:
 
 ```console
-helm install ghes-schedule-scanner oci://ghcr.io/younsl/charts/ghes-schedule-scanner --version 0.4.2 -f values.yaml
+helm install ghes-schedule-scanner oci://ghcr.io/younsl/charts/ghes-schedule-scanner --version 0.5.0 -f values.yaml
 ```
 
 ### Install from local chart
@@ -34,8 +34,8 @@ helm install ghes-schedule-scanner oci://ghcr.io/younsl/charts/ghes-schedule-sca
 Download ghes-schedule-scanner chart and install from local directory:
 
 ```console
-helm pull oci://ghcr.io/younsl/charts/ghes-schedule-scanner --version 0.4.2
-tar -xzf ghes-schedule-scanner-0.4.2.tgz
+helm pull oci://ghcr.io/younsl/charts/ghes-schedule-scanner --version 0.5.0
+tar -xzf ghes-schedule-scanner-0.5.0.tgz
 helm install ghes-schedule-scanner ./ghes-schedule-scanner
 ```
 
@@ -44,7 +44,7 @@ Note: The `--untar` option is not available when pulling from OCI registries. Yo
 ## Upgrade
 
 ```console
-helm upgrade ghes-schedule-scanner oci://ghcr.io/younsl/charts/ghes-schedule-scanner --version 0.4.2
+helm upgrade ghes-schedule-scanner oci://ghcr.io/younsl/charts/ghes-schedule-scanner --version 0.5.0
 ```
 
 ## Uninstall
