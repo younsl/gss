@@ -1,6 +1,6 @@
 # GHES Schedule Scanner (GSS)
 
-[![Go Version](https://img.shields.io/badge/go-1.21+-000000?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/go-1.25.0-000000?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
 [![GitHub release](https://img.shields.io/github/v/release/containerelic/gss?style=flat-square&color=black&logo=github&logoColor=white&label=release)](https://github.com/containerelic/gss/releases)
 [![License](https://img.shields.io/github/license/containerelic/gss?style=flat-square&color=black&logo=github&logoColor=white)](https://github.com/containerelic/gss/blob/main/LICENSE)
 [![CodeQL Scan](https://img.shields.io/github/actions/workflow/status/containerelic/gss/codeql.yml?branch=main&style=flat-square&label=CodeQL&logo=githubactions&logoColor=white&color=black)](https://github.com/containerelic/gss/actions/workflows/codeql.yml)

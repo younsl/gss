@@ -1,6 +1,6 @@
 module github.com/younsl/ghes-schedule-scanner
 
-go 1.23.0
+go 1.25.0
 
 require (
 	github.com/google/go-github/v50 v50.2.0
