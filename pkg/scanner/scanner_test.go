@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 
@@ -81,14 +80,12 @@ func TestScanRepository(t *testing.T) {
 		ctx := context.Background()
 		repo := &github.Repository{
 			Name:          github.String("test-repo"),
+			Owner:         &github.User{Login: github.String("owner")},
 			Archived:      github.Bool(false),
 			DefaultBranch: github.String("main"),
 		}
 
-		var results []models.WorkflowInfo
-		var mu sync.Mutex
-
-		err := scanner.scanRepository(ctx, "owner", repo, &results, &mu)
+		results, err := scanner.scanRepository(ctx, repo)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, results, "Should have workflow results")
 	})
@@ -232,13 +229,11 @@ func runScanTest(t *testing.T, server *httptest.Server) []models.WorkflowInfo {
 		Owner: &github.User{
 			Login: github.String("testorg"),
 		},
+		DefaultBranch: github.String("main"),
 	}
 
-	var results []models.WorkflowInfo
-	var resultMutex sync.Mutex
-
 	// 스캔 실행
-	err := scanner.scanRepository(context.Background(), "testorg", repo, &results, &resultMutex)
+	results, err := scanner.scanRepository(context.Background(), repo)
 	if err != nil {
 		t.Fatalf("Failed to scan repository: %v", err)
 	}
@@ -394,6 +389,18 @@ func (m *mockGitHubClient) ListCommits(ctx context.Context, owner, repo string, 
 				},
 			},
 		},
+	}, nil, nil
+}
+
+func (m *mockGitHubClient) GetUser(ctx context.Context, username string) (*github.User, *github.Response, error) {
+	if m.shouldErr {
+		return nil, nil, fmt.Errorf("mock error")
+	}
+
+	return &github.User{
+		Login: github.String(username),
+		Name:  github.String("Test User"),
+		Email: github.String("test@example.com"),
 	}, nil, nil
 }
 

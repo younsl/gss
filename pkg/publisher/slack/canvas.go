@@ -11,8 +11,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
-	"github.com/younsl/ghes-schedule-scanner/internal/version"
 	"github.com/younsl/ghes-schedule-scanner/pkg/models"
+	"github.com/younsl/ghes-schedule-scanner/pkg/version"
 )
 
 type CanvasPublisher struct {

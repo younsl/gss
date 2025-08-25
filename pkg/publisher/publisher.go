@@ -6,9 +6,6 @@ import (
 
 	"github.com/younsl/ghes-schedule-scanner/pkg/models"
 	"github.com/younsl/ghes-schedule-scanner/pkg/publisher/console"
-	"github.com/younsl/ghes-schedule-scanner/pkg/publisher/discord"
-	"github.com/younsl/ghes-schedule-scanner/pkg/publisher/html"
-	"github.com/younsl/ghes-schedule-scanner/pkg/publisher/json"
 	"github.com/younsl/ghes-schedule-scanner/pkg/publisher/slack"
 )
 
@@ -45,23 +42,6 @@ func (f *Factory) CreatePublisher(publisherType string, config map[string]string
 	case "slack-webhook":
 		return slack.NewWebhookPublisher(
 			config["slackWebhookURL"],
-			config["githubOrganization"],
-			config["githubBaseURL"],
-		), nil
-	case "discord-webhook":
-		return discord.NewWebhookPublisher(
-			config["discordWebhookURL"],
-			config["githubOrganization"],
-			config["githubBaseURL"],
-		), nil
-	case "json":
-		return json.NewJSONPublisher(
-			config["jsonOutputPath"],
-		), nil
-	case "html":
-		return html.NewHTMLPublisher(
-			config["htmlOutputPath"],
-			config["htmlTemplatePath"],
 			config["githubOrganization"],
 			config["githubBaseURL"],
 		), nil

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/younsl/ghes-schedule-scanner/internal/config"
+	"github.com/younsl/ghes-schedule-scanner/pkg/config"
 )
 
 func TestRun(t *testing.T) {
@@ -52,16 +52,8 @@ func TestInitializeReporter(t *testing.T) {
 	assert.NotNil(t, r)
 }
 
-func TestInitializeCanvasPublisher(t *testing.T) {
-	cfg := &config.Config{
-		SlackBotToken:  "test-token",
-		SlackChannelID: "test-channel",
-		SlackCanvasID:  "test-canvas",
-	}
-
-	p := initializeCanvasPublisher(cfg)
-	assert.NotNil(t, p)
-}
+// TestInitializeCanvasPublisher is removed because initializeCanvasPublisher
+// function no longer exists in main.go after refactoring
 
 func TestSetLogLevel(t *testing.T) {
 	tests := []struct {

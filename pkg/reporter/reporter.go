@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/younsl/ghes-schedule-scanner/internal/version"
 	"github.com/younsl/ghes-schedule-scanner/pkg/models"
+	"github.com/younsl/ghes-schedule-scanner/pkg/version"
 )
 
 type ReportFormatter interface {
