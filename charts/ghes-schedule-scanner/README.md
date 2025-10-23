@@ -34,12 +34,9 @@ helm install ghes-schedule-scanner oci://ghcr.io/younsl/charts/ghes-schedule-sca
 Download ghes-schedule-scanner chart and install from local directory:
 
 ```console
-helm pull oci://ghcr.io/younsl/charts/ghes-schedule-scanner --version 0.6.0
-tar -xzf ghes-schedule-scanner-0.6.0.tgz
+helm pull oci://ghcr.io/younsl/charts/ghes-schedule-scanner --version 0.6.0 --untar
 helm install ghes-schedule-scanner ./ghes-schedule-scanner
 ```
-
-Note: The `--untar` option is not available when pulling from OCI registries. You need to manually extract the chart using `tar -xzf`.
 
 ## Upgrade
 

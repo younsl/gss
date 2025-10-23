@@ -56,12 +56,9 @@ helm install {{ template "chart.name" . }} oci://ghcr.io/younsl/charts/{{ templa
 Download {{ template "chart.name" . }} chart and install from local directory:
 
 ```console
-helm pull oci://ghcr.io/younsl/charts/{{ template "chart.name" . }} --version {{ template "chart.version" . }}
-tar -xzf {{ template "chart.name" . }}-{{ template "chart.version" . }}.tgz
+helm pull oci://ghcr.io/younsl/charts/{{ template "chart.name" . }} --version {{ template "chart.version" . }} --untar
 helm install {{ template "chart.name" . }} ./{{ template "chart.name" . }}
 ```
-
-Note: The `--untar` option is not available when pulling from OCI registries. You need to manually extract the chart using `tar -xzf`.
 
 ## Upgrade
 
