@@ -55,3 +55,7 @@ terraform.rc
 # Helm charts
 #----------------------------------------
 values_*.yaml
+
+# Added by cargo
+
+/target
