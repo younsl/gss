@@ -1,19 +1,46 @@
 repos:
-  - repo: https://github.com/golangci/golangci-lint
-    rev: v1.62.0
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
     hooks:
-      - id: golangci-lint
-        args: [--timeout=3m]
-  - repo: https://github.com/TekWizely/pre-commit-golang
-    rev: v1.0.0-rc.1
-    hooks:
-      - id: go-fmt
-      - id: go-test-mod
-      - id: go-mod-tidy
+      - id: fmt
+        name: cargo fmt
+        description: Format Rust code with rustfmt
+        args: ["--manifest-path", "Cargo.toml", "--"]
+      - id: cargo-check
+        name: cargo check
+        description: Check Rust code without building
+        args: ["--manifest-path", "Cargo.toml", "--all-features"]
+      - id: clippy
+        name: cargo clippy
+        description: Lint Rust code with clippy
+        args: ["--manifest-path", "Cargo.toml", "--", "-D", "warnings"]
+
   - repo: https://github.com/norwoodj/helm-docs
-    rev: v1.11.0
+    rev: v1.14.2
     hooks:
       - id: helm-docs
+        name: helm-docs
+        description: Generate Helm chart documentation
         args:
-          - --chart-search-root=deploy/charts/ghes-schedule-scanner
-          - --template-files=deploy/charts/ghes-schedule-scanner/ci/README.md.gotmpl
+          - --chart-search-root=charts/ghes-schedule-scanner
+          - --template-files=charts/ghes-schedule-scanner/ci/README.md.gotmpl
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: trim trailing whitespace
+      - id: end-of-file-fixer
+        name: fix end of files
+      - id: check-yaml
+        name: check yaml syntax
+        args: ["--unsafe"]
+        exclude: ^charts/.*/templates/.*\.yaml$
+      - id: check-added-large-files
+        name: check for large files
+        args: ["--maxkb=1000"]
+      - id: check-merge-conflict
+        name: check for merge conflicts
+      - id: mixed-line-ending
+        name: check line endings
+        args: ["--fix=lf"]

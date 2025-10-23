@@ -1,120 +1,120 @@
 # Core (core/)
-'core/pkg':
-- changed-files:
-  - any-glob-to-any-file: 'pkg/**/*'
+"core/pkg":
+  - changed-files:
+      - any-glob-to-any-file: "pkg/**/*"
 
-'core/internal':
-- changed-files:
-  - any-glob-to-any-file: 'internal/**/*'
+"core/internal":
+  - changed-files:
+      - any-glob-to-any-file: "internal/**/*"
 
-'core/cmd':
-- changed-files:
-  - any-glob-to-any-file: 'cmd/**/*'
+"core/cmd":
+  - changed-files:
+      - any-glob-to-any-file: "cmd/**/*"
 
 # API (api/)
-'api/rest':
-- changed-files:
-  - any-glob-to-any-file: 'api/rest/**/*'
-  - any-glob-to-any-file: 'internal/api/rest/**/*'
-  - any-glob-to-any-file: 'pkg/api/rest/**/*'
+"api/rest":
+  - changed-files:
+      - any-glob-to-any-file: "api/rest/**/*"
+      - any-glob-to-any-file: "internal/api/rest/**/*"
+      - any-glob-to-any-file: "pkg/api/rest/**/*"
 
-'api/grpc':
-- changed-files:
-  - any-glob-to-any-file: 'api/grpc/**/*'
-  - any-glob-to-any-file: 'internal/api/grpc/**/*'
-  - any-glob-to-any-file: 'pkg/api/grpc/**/*'
+"api/grpc":
+  - changed-files:
+      - any-glob-to-any-file: "api/grpc/**/*"
+      - any-glob-to-any-file: "internal/api/grpc/**/*"
+      - any-glob-to-any-file: "pkg/api/grpc/**/*"
 
-'api/proto':
-- changed-files:
-  - any-glob-to-any-file: 'api/proto/**/*'
-  - any-glob-to-any-file: 'proto/**/*'
-  - any-glob-to-any-file: '**/*.proto'
+"api/proto":
+  - changed-files:
+      - any-glob-to-any-file: "api/proto/**/*"
+      - any-glob-to-any-file: "proto/**/*"
+      - any-glob-to-any-file: "**/*.proto"
 
 # Data and models (pkg/models/, internal/models/)
-'data/models':
-- changed-files:
-  - any-glob-to-any-file: 'internal/models/**/*'
-  - any-glob-to-any-file: 'pkg/models/**/*'
+"data/models":
+  - changed-files:
+      - any-glob-to-any-file: "internal/models/**/*"
+      - any-glob-to-any-file: "pkg/models/**/*"
 
-'data/database':
-- changed-files:
-  - any-glob-to-any-file: 'internal/database/**/*'
-  - any-glob-to-any-file: 'pkg/database/**/*'
-  - any-glob-to-any-file: 'migrations/**/*'
-  - any-glob-to-any-file: '**/*.sql'
+"data/database":
+  - changed-files:
+      - any-glob-to-any-file: "internal/database/**/*"
+      - any-glob-to-any-file: "pkg/database/**/*"
+      - any-glob-to-any-file: "migrations/**/*"
+      - any-glob-to-any-file: "**/*.sql"
 
-'data/cache':
-- changed-files:
-  - any-glob-to-any-file: 'internal/cache/**/*'
-  - any-glob-to-any-file: 'pkg/cache/**/*'
+"data/cache":
+  - changed-files:
+      - any-glob-to-any-file: "internal/cache/**/*"
+      - any-glob-to-any-file: "pkg/cache/**/*"
 
 # Kubernetes (deploy/chart/)
-'kubernetes/helm':
-- changed-files:
-  - any-glob-to-any-file: 'deploy/chart/**/*'
+"kubernetes/helm":
+  - changed-files:
+      - any-glob-to-any-file: "deploy/chart/**/*"
 
 # Test
-'test/unit':
-- changed-files:
-  - any-glob-to-any-file: '**/*_test.go'
+"test/unit":
+  - changed-files:
+      - any-glob-to-any-file: "**/*_test.go"
 
-'test/integration':
-- changed-files:
-  - any-glob-to-any-file: 'test/integration/**/*'
-  - any-glob-to-any-file: 'tests/integration/**/*'
+"test/integration":
+  - changed-files:
+      - any-glob-to-any-file: "test/integration/**/*"
+      - any-glob-to-any-file: "tests/integration/**/*"
 
-'test/e2e':
-- changed-files:
-  - any-glob-to-any-file: 'test/e2e/**/*'
-  - any-glob-to-any-file: 'tests/e2e/**/*'
+"test/e2e":
+  - changed-files:
+      - any-glob-to-any-file: "test/e2e/**/*"
+      - any-glob-to-any-file: "tests/e2e/**/*"
 
 # Configs
-'config/build':
-- changed-files:
-  - any-glob-to-any-file: 'go.mod'
-  - any-glob-to-any-file: 'go.sum'
-  - any-glob-to-any-file: 'Makefile'
-  - any-glob-to-any-file: 'Dockerfile'
-  - any-glob-to-any-file: 'docker-compose.yml'
-  - any-glob-to-any-file: '.dockerignore'
+"config/build":
+  - changed-files:
+      - any-glob-to-any-file: "go.mod"
+      - any-glob-to-any-file: "go.sum"
+      - any-glob-to-any-file: "Makefile"
+      - any-glob-to-any-file: "Dockerfile"
+      - any-glob-to-any-file: "docker-compose.yml"
+      - any-glob-to-any-file: ".dockerignore"
 
 # Documentations (docs/)
-'docs/api':
-- changed-files:
-  - any-glob-to-any-file: 'api/swagger/**/*'
-  - any-glob-to-any-file: 'docs/api/**/*'
-  - any-glob-to-any-file: '**/*.swagger.json'
-  - any-glob-to-any-file: '**/*.swagger.yaml'
+"docs/api":
+  - changed-files:
+      - any-glob-to-any-file: "api/swagger/**/*"
+      - any-glob-to-any-file: "docs/api/**/*"
+      - any-glob-to-any-file: "**/*.swagger.json"
+      - any-glob-to-any-file: "**/*.swagger.yaml"
 
-'docs/guide':
-- changed-files:
-  - any-glob-to-any-file: 'docs/**/*'
-  - any-glob-to-any-file: '**/*.md'
-  - any-glob-to-any-file: 'README.md'
+"docs/guide":
+  - changed-files:
+      - any-glob-to-any-file: "docs/**/*"
+      - any-glob-to-any-file: "**/*.md"
+      - any-glob-to-any-file: "README.md"
 
 # Utilities (util/)
-'util/tools':
-- changed-files:
-  - any-glob-to-any-file: 'tools/**/*'
-  - any-glob-to-any-file: 'scripts/**/*'
+"util/tools":
+  - changed-files:
+      - any-glob-to-any-file: "tools/**/*"
+      - any-glob-to-any-file: "scripts/**/*"
 
-'util/vendor':
-- changed-files:
-  - any-glob-to-any-file: 'vendor/**/*'
+"util/vendor":
+  - changed-files:
+      - any-glob-to-any-file: "vendor/**/*"
 
 # Security (security/)
-'security/auth':
-- changed-files:
-  - any-glob-to-any-file: 'internal/auth/**/*'
-  - any-glob-to-any-file: 'pkg/auth/**/*'
+"security/auth":
+  - changed-files:
+      - any-glob-to-any-file: "internal/auth/**/*"
+      - any-glob-to-any-file: "pkg/auth/**/*"
 
-'security/fix':
-- changed-files:
-  - any-glob-to-any-file: 'internal/security/**/*'
-  - any-glob-to-any-file: 'pkg/security/**/*'
+"security/fix":
+  - changed-files:
+      - any-glob-to-any-file: "internal/security/**/*"
+      - any-glob-to-any-file: "pkg/security/**/*"
 
 # Miscellaneous (go.mod, go.sum, etc.)
-'chore/dependencies':
-- changed-files:
-  - any-glob-to-any-file: 'go.mod'
-  - any-glob-to-any-file: 'go.sum'
+"chore/dependencies":
+  - changed-files:
+      - any-glob-to-any-file: "go.mod"
+      - any-glob-to-any-file: "go.sum"

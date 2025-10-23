@@ -8,15 +8,15 @@ This roadmap document outlines upcoming features and improvements for the projec
 
 This table tracks the status of major development tasks. Each task is categorized and includes current progress status and additional notes.
 
-| # | Task | Category | Status | Notes |
-|---|------|----------|--------|-------|
-| 1 | Multi-Publisher System | Feature | Backlog | Core architecture for output flexibility |
-| 2 | Messaging Platform Integration | Integration | Backlog | Discord, Teams webhook support |
-| 3 | Network Connectivity Check | Infrastructure | Done | Required for system stability |
-| 4 | Prometheus Metrics Integration | Monitoring | Backlog | Improves observability |
-| 5 | Code Refactoring | Maintenance | Backlog | Reduces technical debt |
-| 6 | Markdown Export | Feature | Backlog | Documentation support |
-| 7 | JSON/API Support | Integration | Backlog | Enable programmatic access |
+| #   | Task                           | Category       | Status  | Notes                                    |
+| --- | ------------------------------ | -------------- | ------- | ---------------------------------------- |
+| 1   | Multi-Publisher System         | Feature        | Backlog | Core architecture for output flexibility |
+| 2   | Messaging Platform Integration | Integration    | Backlog | Discord, Teams webhook support           |
+| 3   | Network Connectivity Check     | Infrastructure | Done    | Required for system stability            |
+| 4   | Prometheus Metrics Integration | Monitoring     | Backlog | Improves observability                   |
+| 5   | Code Refactoring               | Maintenance    | Backlog | Reduces technical debt                   |
+| 6   | Markdown Export                | Feature        | Backlog | Documentation support                    |
+| 7   | JSON/API Support               | Integration    | Backlog | Enable programmatic access               |
 
 Each task must be in one of these statuses: Backlog, Todo, In Progress, Done, Cancelled
 
@@ -29,6 +29,7 @@ Each task must be in one of these statuses: Backlog, Todo, In Progress, Done, Ca
 Currently, scan results are only published to Slack Canvas. This enhancement introduces a flexible publisher system to support various output formats and destinations.
 
 Key implementation details:
+
 - Create Publisher interface for standardized output handling
 - Implement Factory pattern for publisher creation
 - Support multiple concurrent publishers
@@ -36,6 +37,7 @@ Key implementation details:
 - Maintain backward compatibility with existing Canvas publisher
 
 Planned publisher types:
+
 1. SlackCanvasPublisher (existing)
 2. WebhookPublisher (for messaging platforms)
 3. MarkdownPublisher (documentation)
@@ -49,12 +51,14 @@ Planned publisher types:
 Implement webhook-based integration support for various messaging platforms to increase accessibility and user adoption.
 
 Supported platforms:
+
 - Slack webhook
 - Discord webhook
 - Microsoft Teams webhook
 - Generic webhook for custom integrations
 
 Implementation details:
+
 - Common webhook interface
 - Platform-specific message formatters
 - Configurable webhook URLs
@@ -62,6 +66,7 @@ Implementation details:
 - Message customization options
 
 Configuration example:
+
 ```yaml
 publishers:
   webhook:
@@ -98,6 +103,7 @@ Clean up duplicate code by moving common functions to utils package following DR
 This refactoring is essential to improve code maintainability and reduce technical debt. Centralizing common functions will make the codebase more consistent and easier to update. Following the standard Go project layout will also make it more familiar to new developers and align with industry best practices.
 
 Key implementation details:
+
 - Move common functions to utils package
 - Restructure project layout to follow [Go standard project layout](https://github.com/golang-standards/project-layout)
 
@@ -108,6 +114,7 @@ Key implementation details:
 Add ability to export scan results in markdown format, suitable for GitHub wikis, README files, or other documentation systems.
 
 Implementation details:
+
 - Markdown template system
 - Configurable output formatting
 - Table of contents generation
@@ -121,6 +128,7 @@ Implementation details:
 Provide structured JSON output and API endpoints for programmatic access to scan results. This enables integration with other tools and automation workflows.
 
 Features:
+
 - RESTful API endpoints
 - JSON schema documentation
 - Authentication support

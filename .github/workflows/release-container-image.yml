@@ -4,7 +4,7 @@ run-name: 📦 [younsl/gss] Release GSS image to ghcr.io ${{ github.ref_name }}
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 env:
   IMAGE_NAME: ${{ github.repository_owner }}/gss
@@ -76,10 +76,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set build date
-        id: build-date
+      - name: Set build metadata
+        id: build-metadata
         run: |
           echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_ENV
+          echo "GIT_COMMIT=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: Build and push
         id: build-push
@@ -90,6 +91,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           build-args: |
-            VERSION=${{ env.IMAGE_TAG }}
             BUILD_DATE=${{ env.BUILD_DATE }}
-            COMMIT_HASH=${{ github.sha }}
+            GIT_COMMIT=${{ env.GIT_COMMIT }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
