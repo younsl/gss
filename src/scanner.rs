@@ -102,15 +102,49 @@ impl Scanner {
         let mut page = 1u32;
 
         loop {
-            let repos = self
-                .client
-                .orgs(org)
-                .list_repos()
-                .per_page(100)
-                .page(page)
-                .send()
-                .await
-                .context("Failed to list repositories")?;
+            debug!("Fetching repositories page {} for org: {}", page, org);
+
+            let repos = match tokio::time::timeout(
+                std::time::Duration::from_secs(self.request_timeout),
+                self.client
+                    .orgs(org)
+                    .list_repos()
+                    .per_page(100)
+                    .page(page)
+                    .send(),
+            )
+            .await
+            {
+                Ok(Ok(repos)) => {
+                    debug!(
+                        "Successfully fetched {} repositories on page {}",
+                        repos.items.len(),
+                        page
+                    );
+                    repos
+                }
+                Ok(Err(e)) => {
+                    return Err(anyhow::anyhow!(
+                        "Failed to list repositories on page {}: {}. This may be caused by: \
+                        1) Invalid or expired GitHub token \
+                        2) Insufficient token permissions (needs 'repo' or 'read:org' scope) \
+                        3) Organization '{}' not found \
+                        4) Network connectivity issues. \
+                        Original error: {}",
+                        page,
+                        e,
+                        org,
+                        e
+                    ));
+                }
+                Err(_) => {
+                    return Err(anyhow::anyhow!(
+                        "Timeout listing repositories on page {} (timeout: {}s)",
+                        page,
+                        self.request_timeout
+                    ));
+                }
+            };
 
             if repos.items.is_empty() {
                 break;
@@ -120,6 +154,7 @@ impl Scanner {
             page += 1;
         }
 
+        info!("Successfully listed all {} repositories", all_repos.len());
         Ok(all_repos)
     }
 

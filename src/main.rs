@@ -98,13 +98,16 @@ async fn run() -> Result<()> {
 fn create_github_client(config: &Config) -> Result<Octocrab> {
     let token = config.github_token.clone();
 
-    // Parse the base URL to get the host
+    // Parse the base URL and append /api/v3 for GitHub Enterprise Server
     let base_url = config.github_base_url.trim_end_matches('/');
+    let api_url = format!("{}/api/v3", base_url);
+
+    info!("Initializing GitHub client with API URL: {}", api_url);
 
     // Create octocrab instance with personal token and custom base URL
     let octocrab = Octocrab::builder()
         .personal_token(token)
-        .base_uri(base_url)
+        .base_uri(&api_url)
         .context("Failed to parse GitHub base URL")?
         .build()
         .context("Failed to build GitHub client")?;
