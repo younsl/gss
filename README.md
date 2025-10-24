@@ -1,9 +1,10 @@
 # GHES Schedule Scanner (GSS)
 
 [![Rust Version](https://img.shields.io/badge/rust-1.90+-000000?style=flat-square&logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![GitHub release](https://img.shields.io/github/v/release/containerelic/gss?style=flat-square&color=black&logo=github&logoColor=white&label=release)](https://github.com/containerelic/gss/releases)
-[![License](https://img.shields.io/github/license/containerelic/gss?style=flat-square&color=black&logo=github&logoColor=white)](https://github.com/containerelic/gss/blob/main/LICENSE)
-[![CodeQL Scan](https://img.shields.io/github/actions/workflow/status/containerelic/gss/codeql.yml?branch=main&style=flat-square&label=CodeQL&logo=githubactions&logoColor=white&color=black)](https://github.com/containerelic/gss/actions/workflows/codeql.yml)
+[![GitHub release](https://img.shields.io/github/v/release/younsl/gss?style=flat-square&color=black&logo=github&logoColor=white&label=release)](https://github.com/younsl/gss/releases)
+[![Container Image](https://img.shields.io/badge/ghcr.io-container%20image-blue?style=flat-square&logo=docker&logoColor=white&color=black)](https://github.com/younsl/gss/pkgs/container/gss)
+[![Helm Chart](https://img.shields.io/badge/ghcr.io-helm%20chart-blue?style=flat-square&logo=helm&logoColor=white&color=black)](https://github.com/younsl/gss/pkgs/container/gss%2Fghes-schedule-scanner)
+[![License](https://img.shields.io/github/license/younsl/gss?style=flat-square&color=black&logo=github&logoColor=white)](https://github.com/younsl/gss/blob/main/LICENSE)
 
 > _GSS stands for GHES(GitHub Enterprise Server) Schedule Scanner._
 
