@@ -18,7 +18,7 @@ GHES Schedule Scanner runs as a kubernetes cronJob that periodically scans GitHu
 
 - Workflow names and schedules
 - Last execution status
-- Last committer details
+- Last author details (GitHub username)
 - Repository information
 
 The scanner is designed for high performance with async/concurrent scanning capabilities and provides timezone conversion between UTC and KST for better schedule visibility.
@@ -93,9 +93,9 @@ Build Date: 2025-01-23T10:30:00Z
 Git Commit: abc1234
 Rust Version: 1.83.0
 
-NO   REPOSITORY                        WORKFLOW                            UTC SCHEDULE  KST SCHEDULE  LAST COMMITTER  LAST STATUS
-1    api-test-server                   api unit test                       0 15 * * *    0 0 * * *     younsl          completed
-2    daily-batch                       daily batch service                 0 0 * * *     0 9 * * *     ddukbg          completed
+NO   REPOSITORY                        WORKFLOW                            UTC SCHEDULE  KST SCHEDULE  LAST AUTHOR  LAST STATUS
+1    api-test-server                   api unit test                       0 15 * * *    0 0 * * *     younsl       completed
+2    daily-batch                       daily batch service                 0 0 * * *     0 9 * * *     ddukbg       completed
 
 Total: 2 scheduled workflows found in 100 repositories (5 excluded)
 Scan duration: 18.5s

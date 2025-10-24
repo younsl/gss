@@ -168,16 +168,16 @@ impl ReportFormatter for ConsoleFormatter {
 
         // Table header
         output.push_str(&format!(
-            "{:<4} {:<30} {:<40} {:<20} {:<20} {:<20} {:<15}\n",
+            "{:<4} {:<30} {:<40} {:<20} {:<20} {:<25} {:<15}\n",
             "NO",
             "REPOSITORY",
             "WORKFLOW",
             "UTC SCHEDULE",
             "KST SCHEDULE",
-            "LAST COMMITTER",
+            "WORKFLOW LAST AUTHOR",
             "LAST STATUS"
         ));
-        output.push_str(&"-".repeat(170));
+        output.push_str(&"-".repeat(175));
         output.push('\n');
 
         // Table rows
@@ -190,20 +190,20 @@ impl ReportFormatter for ConsoleFormatter {
                 .collect::<Vec<_>>()
                 .join(", ");
 
-            let committer = if workflow.is_active_user {
-                workflow.last_committer.clone()
+            let author = if workflow.is_active_user {
+                workflow.workflow_last_author.clone()
             } else {
-                format!("{} (inactive)", workflow.last_committer)
+                format!("{} (inactive)", workflow.workflow_last_author)
             };
 
             output.push_str(&format!(
-                "{:<4} {:<30} {:<40} {:<20} {:<20} {:<20} {:<15}\n",
+                "{:<4} {:<30} {:<40} {:<20} {:<20} {:<25} {:<15}\n",
                 idx + 1,
                 truncate(&workflow.repo_name, 30),
                 truncate(&workflow.workflow_name, 40),
                 truncate(&schedule, 20),
                 truncate(&kst_schedule, 20),
-                truncate(&committer, 20),
+                truncate(&author, 25),
                 truncate(&workflow.last_status, 15)
             ));
         }
@@ -294,7 +294,7 @@ mod tests {
         );
         workflow.cron_schedules = vec!["0 9 * * *".to_string()];
         workflow.last_status = "success".to_string();
-        workflow.last_committer = "John Doe".to_string();
+        workflow.workflow_last_author = "johndoe".to_string();
         workflow.is_active_user = true;
 
         result.workflows.push(workflow);

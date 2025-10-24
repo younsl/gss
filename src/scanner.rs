@@ -267,9 +267,10 @@ impl Scanner {
 
                 // Get last committer info with timeout
                 if let Ok((committer, is_active)) =
-                    Self::get_last_committer(&client, org, repo_name, timeout_secs).await
+                    Self::get_last_committer(&client, org, repo_name, &workflow.path, timeout_secs)
+                        .await
                 {
-                    workflow_info.last_committer = committer;
+                    workflow_info.workflow_last_author = committer;
                     workflow_info.is_active_user = is_active;
                 }
 
@@ -380,11 +381,17 @@ impl Scanner {
         client: &Arc<Octocrab>,
         org: &str,
         repo: &str,
+        workflow_path: &str,
         timeout_secs: u64,
     ) -> Result<(String, bool)> {
         let commits = tokio::time::timeout(
             std::time::Duration::from_secs(timeout_secs),
-            client.repos(org, repo).list_commits().per_page(1).send(),
+            client
+                .repos(org, repo)
+                .list_commits()
+                .path(workflow_path)
+                .per_page(1)
+                .send(),
         )
         .await
         .context("Timeout getting commits")?
@@ -392,11 +399,11 @@ impl Scanner {
 
         let last_commit = commits.items.first().context("No commits found")?;
 
-        let committer_name = last_commit
-            .commit
-            .committer
+        // Use author.login (GitHub username) instead of committer.name
+        let author_login = last_commit
+            .author
             .as_ref()
-            .map(|c| c.name.clone())
+            .map(|a| a.login.clone())
             .unwrap_or_else(|| "Unknown".to_string());
 
         // Try to determine if user is active by checking if we can fetch their profile
@@ -411,7 +418,7 @@ impl Scanner {
             false
         };
 
-        Ok((committer_name, is_active))
+        Ok((author_login, is_active))
     }
 }
 

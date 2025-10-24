@@ -9,7 +9,7 @@ pub struct WorkflowInfo {
     pub workflow_file_name: String,
     pub cron_schedules: Vec<String>,
     pub last_status: String,
-    pub last_committer: String,
+    pub workflow_last_author: String,
     pub is_active_user: bool,
 }
 
@@ -27,7 +27,7 @@ impl WorkflowInfo {
             workflow_file_name,
             cron_schedules: Vec::new(),
             last_status: String::new(),
-            last_committer: String::new(),
+            workflow_last_author: String::new(),
             is_active_user: false,
         }
     }

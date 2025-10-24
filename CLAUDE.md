@@ -97,7 +97,7 @@ The project follows Rust 2018+ module conventions with a flat structure:
   - Implements concurrent repository scanning with semaphore-based rate limiting
   - Applies REQUEST_TIMEOUT to all GitHub API calls using `tokio::time::timeout`
   - Extracts workflow schedules from YAML files (base64 decoded)
-  - Tracks workflow status and committer information
+  - Tracks workflow status and author information (GitHub username)
   - Loads repository exclude list from `/etc/gss/exclude-repos.txt`
 
 - **src/reporter.rs**: Report generation and formatting

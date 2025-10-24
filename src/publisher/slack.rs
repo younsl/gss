@@ -127,8 +127,8 @@ impl SlackCanvasPublisher {
                     status_emoji, workflow.last_status
                 ));
                 content.push_str(&format!(
-                    "- **Last Committer:** {} ({})\n",
-                    workflow.last_committer, user_status
+                    "- **Workflow Last Author:** {} ({})\n",
+                    workflow.workflow_last_author, user_status
                 ));
                 content.push('\n');
             }
