@@ -33,7 +33,7 @@ ENV GIT_COMMIT=${GIT_COMMIT}
 RUN cargo build --release
 
 # Runtime stage
-FROM alpine:3.22 AS runtime
+FROM alpine:3.23 AS runtime
 
 WORKDIR /app
 
